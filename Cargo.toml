@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "artillery-ddata",
+    "artillery-core",
+    "artillery-hierman",
+]
