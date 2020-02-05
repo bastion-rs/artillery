@@ -5,6 +5,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use super::state::ArtilleryState;
 use crate::epidemic::state::{ArtilleryClusterRequest, ArtilleryClusterEvent};
 use crate::errors::*;
+use std::rc::Rc;
+use failure::_core::cell::RefCell;
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
@@ -16,12 +18,13 @@ impl Cluster {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
-        let mut state = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
+        let (mut poll, mut state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
 
+        debug!("Starting Artillery Cluster");
         std::thread::Builder::new()
             .name("artillery-epidemic-cluster-state".to_string())
             .spawn(move || {
-                ArtilleryState::event_loop(&mut internal_rx, &mut state)
+                ArtilleryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
             })
             .expect("cannot start epidemic cluster state management thread");
@@ -50,22 +53,3 @@ impl Drop for Cluster {
         rx.recv().unwrap();
     }
 }
-
-//#[inline]
-//pub(crate) fn cluster_state() -> &'static ArtilleryState {
-//    lazy_static! {
-//        static ref CLUSTER_STATE: ArtilleryState = {
-//            std::thread::Builder::new()
-//                .name("artillery-epidemic-cluster-state".to_string())
-//                .spawn(move || {
-//                    ArtilleryState::event_loop()
-//                        .expect("Failed to create event loop");
-//                })
-//                .expect("cannot start epidemic cluster state management thread");
-//        }
-//
-//        ArtilleryState::new()
-//    }
-//
-//    &*CLUSTER_STATE
-//}

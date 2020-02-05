@@ -5,3 +5,8 @@ extern crate log;
 mod errors;
 
 mod epidemic;
+
+pub mod prelude {
+    pub use super::epidemic::cluster::*;
+    pub use super::epidemic::cluster_config::*;
+}
