@@ -1,3 +1,4 @@
+use crate::errors::*;
 use super::cluster_config::ClusterConfig;
 use uuid::Uuid;
 use std::net::{SocketAddr};
@@ -9,8 +10,6 @@ use std::collections::HashMap;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use serde::*;
 use mio::{Events, Interest, Poll, Token};
-use lazy_static::*;
-use crate::errors::*;
 use std::io;
 use mio::net::UdpSocket;
 
@@ -114,42 +113,50 @@ impl ArtilleryState {
     pub(crate) fn event_loop(receiver: &mut Receiver<ArtilleryClusterRequest>, state: &mut ArtilleryState) -> Result<()> {
         let mut poll: &mut Poll = &mut state.poller;
         let mut events = Events::with_capacity(1_000);
-        let mut buf = [0_i32; 1 << 16];
+        let mut buf = [0_u8; 1 << 16];
 
         // Our event loop.
         loop {
             // Poll to check if we have events waiting for us.
             poll.poll(&mut events, None)?;
 
+            // Process our own events that are submitted to event loop
+            // Aka outbound events
             while let Ok(msg) = receiver.try_recv() {
                 unimplemented!()
             }
 
-            // Process each event.
+            // Process inbound events
             for event in events.iter() {
                 // Validate the token we registered our socket with,
                 // in this example it will only ever be one but we
                 // make sure it's valid none the less.
                 match event.token() {
-                    UDP_SOCKET => loop {
-                        // In this loop we receive all packets queued for the socket.
-//                        match socket.recv_from(&mut buf) {
-//                            Ok((packet_size, source_address)) => {
-//                                // Echo the data.
-//                                socket.send_to(&buf[..packet_size], source_address)?;
-//                            }
-//                            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
-//                                // If we get a `WouldBlock` error we know our socket
-//                                // has no more packets queued, so we can return to
-//                                // polling and wait for some more.
-//                                break;
-//                            }
-//                            Err(e) => {
-//                                // If it was any other kind of error, something went
-//                                // wrong and we terminate with an error.
-//                                return Err(e);
-//                            }
-//                        }
+                    UDP_SERVER => loop {
+                        match state.server_socket.recv_from(&mut buf) {
+                            Ok((packet_size, source_address)) => {
+                                // Echo the data.
+                                let message = serde_json::from_str(&*String::from_utf8_lossy(&buf[..packet_size]))?;
+                                state.request_tx.send(ArtilleryClusterRequest::Respond(source_address, message))?;
+                            }
+                            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                                // If we get a `WouldBlock` error we know our socket
+                                // has no more packets queued, so we can return to
+                                // polling and wait for some more.
+                                break;
+                            }
+                            Err(e) => {
+                                // If it was any other kind of error, something went
+                                // wrong and we terminate with an error.
+                                bail!(
+                                    ArtilleryError::UnexpectedError,
+                                    format!(
+                                        "Unexpected error occured in event loop: {}",
+                                        e.to_string()
+                                    )
+                                )
+                            }
+                        }
                     },
                     _ => {
                         // This should never happen as we only registered our

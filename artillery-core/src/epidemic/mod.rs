@@ -5,5 +5,6 @@ pub mod member;
 pub mod membership;
 pub mod cluster_config;
 pub mod constants;
+#[macro_use]
 pub mod state;
 pub mod cluster;
