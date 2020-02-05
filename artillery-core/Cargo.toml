@@ -7,9 +7,17 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4.8"
+failure = "0.1.6"
+failure_derive = "0.1.6"
+bastion-executor = "0.3.4"
+bastion-utils = "0.3.2"
+cuneiform-fields = "0.1"
+lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
+mio = { version = "0.7.0-alpha.1", features = ["os-poll", "udp"] }
 
 [dev-dependencies]
 bincode = "1.2.1"

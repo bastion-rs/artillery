@@ -6,7 +6,8 @@ use chrono::Duration;
 use uuid::Uuid;
 
 use super::member::{ArtilleryMember, ArtilleryMemberState, ArtilleryStateChange};
-use crate::epidemic::{member, utils};
+use crate::epidemic::member;
+use bastion_utils::math;
 
 pub struct ArtilleryMemberList {
     members: Vec<ArtilleryMember>,
@@ -43,7 +44,7 @@ impl ArtilleryMemberList {
             }
         }
 
-        panic!("Could not find myself as member");
+        panic!("Could not find this instance as registered member");
     }
 
     pub fn reincarnate_self(&mut self) -> ArtilleryMember {
@@ -63,7 +64,7 @@ impl ArtilleryMemberList {
 
     pub fn next_random_member(&mut self) -> Option<ArtilleryMember> {
         if self.periodic_index == 0 {
-            utils::shuffle_linear(&mut self.members);
+            math::shuffle_linear(&mut self.members);
         }
 
         let other_members: Vec<_> = self.members.iter().filter(|&m| m.is_remote()).collect();
@@ -188,7 +189,7 @@ impl ArtilleryMemberList {
             .map(|m| m.remote_host().unwrap())
             .collect();
 
-        utils::shuffle_linear(&mut possible_members);
+        math::shuffle_linear(&mut possible_members);
 
         possible_members.iter().take(host_count).cloned().collect()
     }
