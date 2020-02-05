@@ -10,10 +10,8 @@ edition = "2018"
 log = "0.4.8"
 failure = "0.1.6"
 failure_derive = "0.1.6"
-bastion-executor = "0.3.4"
 bastion-utils = "0.3.2"
 cuneiform-fields = "0.1"
-lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 uuid = { version = "0.8", features = ["serde", "v4"] }
