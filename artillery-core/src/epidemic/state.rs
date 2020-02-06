@@ -2,27 +2,27 @@ use crate::errors::*;
 use super::cluster_config::ClusterConfig;
 use uuid::Uuid;
 use std::net::{SocketAddr};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use std::time::Duration;
 use cuneiform_fields::prelude::*;
 use super::membership::ArtilleryMemberList;
 use crate::epidemic::member::{ArtilleryStateChange, ArtilleryMember, ArtilleryMemberState};
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender};
 use serde::*;
 use mio::{Events, Interest, Poll, Token};
 use std::io;
 use mio::net::UdpSocket;
 use std::collections::hash_map::Entry;
-use std::str::FromStr;
+
 use failure::_core::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::sync::Arc;
-use std::ops::DerefMut;
-use failure::_core::ops::Deref;
+
+
+
+
+
 use crate::epidemic::constants::CONST_PACKET_SIZE;
 
 pub type ArtilleryClusterEvent = (Vec<ArtilleryMember>, ArtilleryMemberEvent);
@@ -94,7 +94,7 @@ impl ArtilleryState {
            config: ClusterConfig,
            event_tx: Sender<ArtilleryClusterEvent>,
            internal_tx: Sender<ArtilleryClusterRequest>) -> Result<ClusterReactor> {
-        let mut poll: Poll = Poll::new()?;
+        let poll: Poll = Poll::new()?;
 
         let interests = Interest::READABLE.add(Interest::WRITABLE);
         let mut server_socket = UdpSocket::bind(config.listen_addr)?;
@@ -220,7 +220,7 @@ impl ArtilleryState {
 
         assert!(encoded.len() < self.config.network_mtu);
 
-        let mut buf = encoded.as_bytes();
+        let buf = encoded.as_bytes();
         self.server_socket.send_to(&buf, request.target).unwrap();
     }
 
@@ -400,7 +400,7 @@ impl ArtilleryState {
 
     fn mark_node_alive(&mut self, src_addr: SocketAddr) {
         if let Some(member) = self.members.mark_node_alive(&src_addr) {
-            if let Some(mut wait_list) = self.wait_list.get_mut(&src_addr) {
+            if let Some(wait_list) = self.wait_list.get_mut(&src_addr) {
                 for remote in wait_list.iter() {
                     self.request_tx.send(ArtilleryClusterRequest::React(TargetedRequest {
                         request: Request::AckHost(member.clone()),

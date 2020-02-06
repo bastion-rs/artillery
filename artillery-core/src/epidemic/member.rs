@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::net::SocketAddr;
-use std::str::FromStr;
 
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+
+use chrono::{DateTime, Duration, Utc};
 use serde::*;
 use uuid::Uuid;
 
@@ -206,7 +206,7 @@ mod test {
 
     use super::{ArtilleryMember, ArtilleryMemberState};
     use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-    use serde_json::*;
+    
     use uuid;
 
     #[test]

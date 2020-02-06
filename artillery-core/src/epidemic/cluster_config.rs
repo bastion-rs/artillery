@@ -1,5 +1,5 @@
 use chrono::Duration;
-use std::net::{ToSocketAddrs, SocketAddr, UdpSocket};
+use std::net::{ToSocketAddrs, SocketAddr};
 use super::constants::*;
 
 pub struct ClusterConfig {

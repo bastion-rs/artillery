@@ -84,7 +84,7 @@ impl ArtilleryMemberList {
         let mut suspect_members = Vec::new();
         let mut down_members = Vec::new();
 
-        for mut member in self.members.iter_mut() {
+        for member in self.members.iter_mut() {
             if let Some(remote_host) = member.remote_host() {
                 if !expired_hosts.contains(&remote_host) {
                     continue;
@@ -106,7 +106,7 @@ impl ArtilleryMemberList {
     }
 
     pub fn mark_node_alive(&mut self, src_addr: &SocketAddr) -> Option<ArtilleryMember> {
-        for mut member in self.members.iter_mut() {
+        for member in self.members.iter_mut() {
             if member.remote_host() == Some(*src_addr)
                 && member.state() != ArtilleryMemberState::Alive
             {

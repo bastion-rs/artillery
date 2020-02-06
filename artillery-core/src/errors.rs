@@ -1,6 +1,6 @@
 use failure::*;
 use std::io;
-use std::option;
+
 use std::result;
 use std::sync::mpsc::SendError;
 

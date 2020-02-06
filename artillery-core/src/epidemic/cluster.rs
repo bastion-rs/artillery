@@ -16,7 +16,7 @@ impl Cluster {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
-        let (mut poll, mut state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
+        let (poll, state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
         std::thread::Builder::new()
