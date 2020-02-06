@@ -33,7 +33,7 @@ impl ArtilleryMemberList {
     pub fn to_map(&self) -> HashMap<Uuid, ArtilleryMember> {
         self.members
             .iter()
-            .map(|m| (m.host_key().clone(), (*m).clone()))
+            .map(|m| (m.host_key(), (*m).clone()))
             .collect()
     }
 
@@ -69,7 +69,7 @@ impl ArtilleryMemberList {
 
         let other_members: Vec<_> = self.members.iter().filter(|&m| m.is_remote()).collect();
 
-        if other_members.len() == 0 {
+        if other_members.is_empty() {
             None
         } else {
             self.periodic_index = (self.periodic_index + 1) % other_members.len();
@@ -148,7 +148,7 @@ impl ArtilleryMemberList {
                                 .clone();
                         let new_host = new_member
                             .remote_host()
-                            .or(entry.get().remote_host())
+                            .or_else(|| entry.get().remote_host())
                             .unwrap();
                         let new_member = new_member.member_by_changing_host(new_host);
 

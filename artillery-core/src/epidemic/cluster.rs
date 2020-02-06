@@ -5,8 +5,6 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use super::state::ArtilleryState;
 use crate::epidemic::state::{ArtilleryClusterRequest, ArtilleryClusterEvent};
 use crate::errors::*;
-use std::rc::Rc;
-use failure::_core::cell::RefCell;
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,

@@ -1,7 +1,6 @@
 use chrono::Duration;
 use std::net::{ToSocketAddrs, SocketAddr, UdpSocket};
 use super::constants::*;
-use std::ops::Deref;
 
 pub struct ClusterConfig {
     pub cluster_key: Vec<u8>,
@@ -17,9 +16,9 @@ impl Default for ClusterConfig {
         let directed = SocketAddr::from(([127, 0, 0, 1], CONST_DISSEMINATION_PORT));
 
         ClusterConfig {
-            cluster_key: "default".as_bytes().to_vec(),
+            cluster_key: b"default".to_vec(),
             ping_interval: Duration::seconds(1),
-            network_mtu: CONST_MTU,
+            network_mtu: CONST_PACKET_SIZE,
             ping_request_host_count: 3,
             ping_timeout: Duration::seconds(3),
             listen_addr: directed.to_socket_addrs().unwrap().next().unwrap(),

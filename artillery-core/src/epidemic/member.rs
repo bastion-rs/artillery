@@ -70,7 +70,7 @@ impl ArtilleryMember {
     }
 
     pub fn host_key(&self) -> Uuid {
-        self.host_key.clone()
+        self.host_key
     }
 
     pub fn remote_host(&self) -> Option<SocketAddr> {
@@ -114,7 +114,7 @@ impl ArtilleryMember {
 
 impl ArtilleryStateChange {
     pub fn new(member: ArtilleryMember) -> ArtilleryStateChange {
-        ArtilleryStateChange { member: member }
+        ArtilleryStateChange { member }
     }
 
     pub fn member(&self) -> &ArtilleryMember {
@@ -132,17 +132,17 @@ impl PartialOrd for ArtilleryMember {
             self.host_key.as_bytes(),
             format!("{:?}", self.remote_host),
             self.incarnation_number,
-            self.member_state.clone(),
+            self.member_state,
         );
 
         let t2 = (
             rhs.host_key.as_bytes(),
             format!("{:?}", rhs.remote_host),
             rhs.incarnation_number,
-            rhs.member_state.clone(),
+            rhs.member_state,
         );
 
-        return t1.partial_cmp(&t2);
+        t1.partial_cmp(&t2)
     }
 }
 

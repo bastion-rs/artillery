@@ -1,11 +1,10 @@
-use failure::Backtrace;
 use failure::*;
 use std::io;
 use std::option;
 use std::result;
 use std::sync::mpsc::SendError;
 
-/// Result type for operations that could result in an `ExecutionError`
+/// Result type for operations that could result in an `ArtilleryError`
 pub type Result<T> = result::Result<T, ArtilleryError>;
 
 #[derive(Fail, Debug)]
