@@ -205,7 +205,7 @@ mod test {
     use std::str::FromStr;
 
     use super::{ArtilleryMember, ArtilleryMemberState};
-    use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+    use chrono::{Duration, Utc};
     
     use uuid;
 
