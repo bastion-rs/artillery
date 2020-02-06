@@ -2,28 +2,28 @@ use crate::errors::*;
 use super::cluster_config::ClusterConfig;
 use uuid::Uuid;
 use std::net::{SocketAddr};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use std::time::Duration;
 use cuneiform_fields::prelude::*;
 use super::membership::ArtilleryMemberList;
 use crate::epidemic::member::{ArtilleryStateChange, ArtilleryMember, ArtilleryMemberState};
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender};
 use serde::*;
 use mio::{Events, Interest, Poll, Token};
 use std::io;
 use mio::net::UdpSocket;
 use std::collections::hash_map::Entry;
-use std::str::FromStr;
+
 use failure::_core::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::sync::Arc;
-use std::ops::DerefMut;
-use failure::_core::ops::Deref;
-use crate::epidemic::constants::CONST_MTU;
+
+
+
+
+
+use crate::epidemic::constants::CONST_PACKET_SIZE;
 
 pub type ArtilleryClusterEvent = (Vec<ArtilleryMember>, ArtilleryMemberEvent);
 pub type WaitList = HashMap<SocketAddr, Vec<SocketAddr>>;
@@ -93,15 +93,15 @@ impl ArtilleryState {
     pub fn new(host_key: Uuid,
            config: ClusterConfig,
            event_tx: Sender<ArtilleryClusterEvent>,
-           internal_tx: Sender<ArtilleryClusterRequest>) -> Result<(Poll, ArtilleryState)> {
-        let mut poll: Poll = Poll::new()?;
+           internal_tx: Sender<ArtilleryClusterRequest>) -> Result<ClusterReactor> {
+        let poll: Poll = Poll::new()?;
 
         let interests = Interest::READABLE.add(Interest::WRITABLE);
         let mut server_socket = UdpSocket::bind(config.listen_addr)?;
         poll.registry()
             .register(&mut server_socket, UDP_SERVER, interests)?;
 
-        let me = ArtilleryMember::current(host_key.clone());
+        let me = ArtilleryMember::current(host_key);
 
         let state = ArtilleryState {
             host_key,
@@ -122,7 +122,7 @@ impl ArtilleryState {
 
     pub(crate) fn event_loop(receiver: &mut Receiver<ArtilleryClusterRequest>, mut poll: Poll, mut state: ArtilleryState) -> Result<()> {
         let mut events = Events::with_capacity(1);
-        let mut buf = [0_u8; CONST_MTU];
+        let mut buf = [0_u8; CONST_PACKET_SIZE];
 
         let mut start = Instant::now();
         let timeout = Duration::from_millis(state.config.ping_interval.num_milliseconds() as u64);
@@ -213,22 +213,22 @@ impl ArtilleryState {
                                     self.config.network_mtu);
 
         if should_add_pending {
-            self.pending_responses.push((timeout, request.target.clone(), message.state_changes.clone()));
+            self.pending_responses.push((timeout, request.target, message.state_changes.clone()));
         }
 
         let encoded = serde_json::to_string(&message).unwrap();
 
         assert!(encoded.len() < self.config.network_mtu);
 
-        let mut buf = encoded.as_bytes();
-        self.server_socket.send_to(&mut buf, request.target).unwrap();
+        let buf = encoded.as_bytes();
+        self.server_socket.send_to(&buf, request.target).unwrap();
     }
 
     fn enqueue_seed_nodes(&self) {
         for seed_node in &self.seed_queue {
             self.request_tx.send(ArtilleryClusterRequest::React(TargetedRequest {
                 request: Request::Ping,
-                target: seed_node.clone(),
+                target: *seed_node,
             })).unwrap();
         }
     }
@@ -334,11 +334,9 @@ impl ArtilleryState {
                 }
             };
 
-            match response {
-                Some(response) => self.request_tx.send(
-                    ArtilleryClusterRequest::React(response)).unwrap(),
-                None => (),
-            };
+            if let Some(response) = response {
+                self.request_tx.send(ArtilleryClusterRequest::React(response)).unwrap()
+            }
         }
     }
 
@@ -350,7 +348,7 @@ impl ArtilleryState {
                 continue;
             }
 
-            to_remove.push((t.clone(), addr.clone(), state_changes.clone()));
+            to_remove.push((*t, *addr, state_changes.clone()));
 
             self.state_changes
                 .retain(|os| !state_changes.iter().any(| is | is.member().host_key() == os.member().host_key()))
@@ -402,44 +400,41 @@ impl ArtilleryState {
 
     fn mark_node_alive(&mut self, src_addr: SocketAddr) {
         if let Some(member) = self.members.mark_node_alive(&src_addr) {
-            match self.wait_list.get_mut(&src_addr) {
-                Some(mut wait_list) => {
-                    for remote in wait_list.iter() {
-                        self.request_tx.send(ArtilleryClusterRequest::React(TargetedRequest {
-                            request: Request::AckHost(member.clone()),
-                            target: *remote
-                        })).unwrap();
-                    }
+            if let Some(wait_list) = self.wait_list.get_mut(&src_addr) {
+                for remote in wait_list.iter() {
+                    self.request_tx.send(ArtilleryClusterRequest::React(TargetedRequest {
+                        request: Request::AckHost(member.clone()),
+                        target: *remote
+                    })).unwrap();
+                }
 
-                    wait_list.clear();
-                },
-                None => ()
-            };
+                wait_list.clear();
+            }
 
             enqueue_state_change(&mut self.state_changes, &[member.clone()]);
-            self.send_member_event(ArtilleryMemberEvent::MemberWentUp(member.clone()));
+            self.send_member_event(ArtilleryMemberEvent::MemberWentUp(member));
         }
     }
 }
 
 fn build_message(sender: &Uuid,
-                 cluster_key: &Vec<u8>,
+                 cluster_key: &[u8],
                  request: Request,
                  state_changes: Vec<ArtilleryStateChange>,
                  network_mtu: usize) -> ArtilleryMessage {
     let mut message = ArtilleryMessage {
-        sender: sender.clone(),
-        cluster_key: cluster_key.clone(),
+        sender: *sender,
+        cluster_key: cluster_key.into(),
         request: request.clone(),
         state_changes: Vec::new(),
     };
 
-    for i in 0..state_changes.len() + 1 {
+    for i in 0..=state_changes.len() {
         message = ArtilleryMessage {
-            sender: sender.clone(),
-            cluster_key: cluster_key.clone(),
+            sender: *sender,
+            cluster_key: cluster_key.into(),
             request: request.clone(),
-            state_changes: (&state_changes[..i]).iter().cloned().collect(),
+            state_changes: (&state_changes[..i]).to_vec(),
         };
 
         let encoded = serde_json::to_string(&message).unwrap();
@@ -454,7 +449,7 @@ fn build_message(sender: &Uuid,
 fn add_to_wait_list(wait_list: &mut WaitList, wait_addr: &SocketAddr, notify_addr: &SocketAddr) {
     match wait_list.entry(*wait_addr) {
         Entry::Occupied(mut entry) => { entry.get_mut().push(notify_addr.clone()); },
-        Entry::Vacant(entry) => { entry.insert(vec![notify_addr.clone()]); }
+        Entry::Vacant(entry) => { entry.insert(vec![*notify_addr]); }
     };
 }
 
@@ -489,6 +484,6 @@ fn enqueue_state_change(state_changes: &mut Vec<ArtilleryStateChange>, members: 
 
 impl EncSocketAddr {
     fn from_addr(addr: &SocketAddr) -> Self {
-        EncSocketAddr(addr.clone())
+        EncSocketAddr(*addr)
     }
 }

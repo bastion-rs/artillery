@@ -5,8 +5,6 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use super::state::ArtilleryState;
 use crate::epidemic::state::{ArtilleryClusterRequest, ArtilleryClusterEvent};
 use crate::errors::*;
-use std::rc::Rc;
-use failure::_core::cell::RefCell;
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
@@ -18,7 +16,7 @@ impl Cluster {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
-        let (mut poll, mut state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
+        let (poll, state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
         std::thread::Builder::new()
