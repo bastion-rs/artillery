@@ -19,3 +19,6 @@ bcs
 
 # Intellij stuff
 .idea/
+
+# Cluster related files to be ignored
+artillery-core/statedata
