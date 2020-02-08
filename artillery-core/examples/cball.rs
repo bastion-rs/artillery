@@ -106,6 +106,6 @@ fn read_host_key(root_folder: &Path) -> Uuid {
     let host_key = Uuid::new_v4();
     let mut host_key_file = File::create(&host_key_path).unwrap();
     host_key_file.write_all(host_key.as_bytes()).unwrap();
-
-    return host_key;
+    // https://open.spotify.com/track/6Btbw0SV8FqxJ0AAA26Xrd?si=4BR-pO7nQki-DlCrvCTGgg
+    host_key
 }

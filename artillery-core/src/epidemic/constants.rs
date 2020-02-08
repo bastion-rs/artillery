@@ -1,5 +1,6 @@
 
-pub const CONST_DISSEMINATION_PORT: u16 = 3242;
+// ARTIL = 27845
+pub const CONST_DISSEMINATION_PORT: u16 = 27845;
 
 // Not sure MIO handles this correctly.
 // Behave like this is the size. Normally 512 is enough.
