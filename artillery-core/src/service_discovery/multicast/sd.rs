@@ -2,29 +2,21 @@ use crate::service_discovery::multicast::discovery_config::MulticastServiceDisco
 use cuneiform_fields::arch::ArchPadding;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use crate::errors::*;
-use crate::service_discovery::multicast::state::{MulticastServiceDiscoveryState, ServiceDiscoveryRequest, ServiceDiscoveryReply};
+use crate::service_discovery::multicast::state::{ServiceDiscoveryRequest, ServiceDiscoveryReply};
+use crate::service_discovery::multicast::state::MulticastServiceDiscoveryState;
+use std::sync::mpsc;
 
-pub struct MulticastServiceDiscovery<T>
-where
-    T: ServiceDiscoveryReply
+pub struct MulticastServiceDiscovery
 {
-    pub events: ArchPadding<Receiver<ServiceDiscoveryEvent>>,
-    comm: ArchPadding<Sender<ServiceDiscoveryRequest<T>>>,
+    comm: ArchPadding<Sender<ServiceDiscoveryRequest>>,
 }
 
-impl<T> MulticastServiceDiscovery<T>
-where
-    T: ServiceDiscoveryReply
+impl MulticastServiceDiscovery
 {
     pub fn new_service_discovery(config: MulticastServiceDiscoveryConfig) -> Result<Self> {
-        let (event_tx, event_rx) = channel::<ServiceDiscoveryEvent>();
-        let (internal_tx, mut internal_rx) = channel::<ServiceDiscoveryRequest<T>>();
-
-        let (poll, state) = MulticastServiceDiscoveryState::new(
-            config,
-            event_tx,
-            internal_tx.clone()
-        )?;
+        let (internal_tx, mut internal_rx) = channel::<ServiceDiscoveryRequest>();
+        let (poll, state) =
+            MulticastServiceDiscoveryState::new(config, internal_tx.clone())?;
 
         debug!("Starting Artillery Multicast SD");
         std::thread::Builder::new()
@@ -35,11 +27,16 @@ where
             })
             .expect("cannot start multicast service discovery state thread");
 
-
         Ok(Self {
-            events: ArchPadding::new(event_rx),
             comm: ArchPadding::new(internal_tx)
         })
+    }
+
+    /// Register a new observer to be notified whenever we
+    /// successfully find peers by interrogating the network.
+    pub fn register_seek_peer_observer(&self, observer: mpsc::Sender<ServiceDiscoveryReply>) -> Result<()> {
+        let observer = ArchPadding::new(observer);
+        Ok(self.comm.send(ServiceDiscoveryRequest::RegisterObserver(observer))?)
     }
 
     /// Explore the network to find nodes using multicast SD.
@@ -50,4 +47,3 @@ where
         Ok(rx.recv()?)
     }
 }
-

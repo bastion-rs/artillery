@@ -3,6 +3,7 @@ use crate::constants::*;
 use chrono::Duration;
 
 pub struct MulticastServiceDiscoveryConfig {
+    pub timeout_delta: Duration,
     pub seeking_addr: SocketAddr,
     pub discovery_addr: SocketAddr,
 }
@@ -13,7 +14,7 @@ impl Default for MulticastServiceDiscoveryConfig {
         let seeking_addr = SocketAddr::from(([255, 255, 255, 255], CONST_SERVICE_DISCOVERY_PORT));
 
         Self {
-//            ping_interval: Duration::seconds(1),
+            timeout_delta: Duration::seconds(1),
 //            packet_size: CONST_PACKET_SIZE,
 //            ping_request_host_count: 3,
 //            discovery_timeout: Duration::seconds(3),

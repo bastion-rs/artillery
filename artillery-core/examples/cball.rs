@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 fn main() {
     pretty_env_logger::init();
-    let matches = App::new("Cannonball")
+    let matches = App::new("Cannonball :: Epidemic")
         .author("Mahmut Bulut, vertexclique [ta] gmail [tod] com")
         .version(crate_version!())
         .about("Artillery Epidemic Protocol Tester")
