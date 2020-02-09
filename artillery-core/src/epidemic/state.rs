@@ -19,11 +19,7 @@ use failure::_core::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
-
-
-
-
-use crate::epidemic::constants::CONST_PACKET_SIZE;
+use crate::constants::*;
 
 pub type ArtilleryClusterEvent = (Vec<ArtilleryMember>, ArtilleryMemberEvent);
 pub type WaitList = HashMap<SocketAddr, Vec<SocketAddr>>;

@@ -1,6 +1,6 @@
 use chrono::Duration;
 use std::net::{ToSocketAddrs, SocketAddr};
-use super::constants::*;
+use crate::constants::*;
 
 pub struct ClusterConfig {
     pub cluster_key: Vec<u8>,

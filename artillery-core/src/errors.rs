@@ -2,7 +2,7 @@ use failure::*;
 use std::io;
 
 use std::result;
-use std::sync::mpsc::SendError;
+use std::sync::mpsc::{SendError, RecvError};
 
 /// Result type for operations that could result in an `ArtilleryError`
 pub type Result<T> = result::Result<T, ArtilleryError>;
@@ -18,6 +18,8 @@ pub enum ArtilleryError {
     ClusterMessageDecodeError(String),
     #[fail(display = "Artillery :: Message Send Error: {}", _0)]
     SendError(String),
+    #[fail(display = "Artillery :: Message Receive Error: {}", _0)]
+    ReceiveError(String),
     #[fail(display = "Artillery :: Unexpected Error: {}", _0)]
     UnexpectedError(String),
 }
@@ -37,6 +39,12 @@ impl From<serde_json::error::Error> for ArtilleryError {
 impl<T> From<std::sync::mpsc::SendError<T>> for ArtilleryError {
     fn from(e: SendError<T>) -> Self {
         ArtilleryError::SendError(e.to_string())
+    }
+}
+
+impl From<std::sync::mpsc::RecvError> for ArtilleryError {
+    fn from(e: RecvError) -> Self {
+        ArtilleryError::ReceiveError(e.to_string())
     }
 }
 

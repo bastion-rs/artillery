@@ -4,6 +4,5 @@
 pub mod member;
 pub mod membership;
 pub mod cluster_config;
-pub mod constants;
 pub mod state;
 pub mod cluster;
