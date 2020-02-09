@@ -2,7 +2,7 @@ use failure::*;
 use std::io;
 
 use std::result;
-use std::sync::mpsc::{SendError, RecvError};
+use std::sync::mpsc::{RecvError, SendError};
 
 /// Result type for operations that could result in an `ArtilleryError`
 pub type Result<T> = result::Result<T, ArtilleryError>;

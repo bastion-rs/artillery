@@ -3,7 +3,6 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::net::SocketAddr;
 
-
 use chrono::{DateTime, Duration, Utc};
 use serde::*;
 use uuid::Uuid;
@@ -206,7 +205,7 @@ mod test {
 
     use super::{ArtilleryMember, ArtilleryMemberState};
     use chrono::{Duration, Utc};
-    
+
     use uuid;
 
     #[test]

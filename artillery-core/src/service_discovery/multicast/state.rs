@@ -1,33 +1,33 @@
-use std::sync::mpsc::{Sender, Receiver};
-use cuneiform_fields::arch::ArchPadding;
-use crate::service_discovery::multicast::discovery_config::MulticastServiceDiscoveryConfig;
-use mio::net::UdpSocket;
-use mio::{Token, Events, Poll, Interest};
 use crate::constants::*;
 use crate::errors::*;
-use std::time::{Instant, Duration};
-use std::sync::atomic::Ordering;
-use std::io;
-use serde::*;
+use crate::service_discovery::multicast::discovery_config::MulticastServiceDiscoveryConfig;
 use bastion_utils::math::random;
-use serde::de::DeserializeOwned;
+use cuneiform_fields::arch::ArchPadding;
+use mio::net::UdpSocket;
+use mio::{Events, Interest, Poll, Token};
+
+use serde::*;
 use std::collections::VecDeque;
+
 use std::net::SocketAddr;
 
+use std::sync::mpsc::{Receiver, Sender};
+use std::time::{Duration, Instant};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct ServiceDiscoveryReply {
-    serialized_data: String
+    serialized_data: String,
 }
 
 impl Default for ServiceDiscoveryReply {
     fn default() -> Self {
-        Self { serialized_data: "DONE".into() }
+        Self {
+            serialized_data: "DONE".into(),
+        }
     }
 }
 
-pub(crate) enum ServiceDiscoveryRequest
-{
+pub(crate) enum ServiceDiscoveryRequest {
     RegisterObserver(ArchPadding<Sender<ServiceDiscoveryReply>>),
     SetBroadcastListen(bool),
     SeekPeers(Sender<()>),
@@ -35,17 +35,18 @@ pub(crate) enum ServiceDiscoveryRequest
 }
 
 #[derive(Serialize, Deserialize)]
-enum ServiceDiscoveryMessage
-{
+enum ServiceDiscoveryMessage {
     Request,
-    Response { uid: u32, content: ServiceDiscoveryReply },
+    Response {
+        uid: u32,
+        content: ServiceDiscoveryReply,
+    },
 }
 
 const ON_DISCOVERY: Token = Token(0);
 const SEEK_NODES: Token = Token(1);
 
-pub struct MulticastServiceDiscoveryState
-{
+pub struct MulticastServiceDiscoveryState {
     config: MulticastServiceDiscoveryConfig,
     server_socket: UdpSocket,
     request_tx: ArchPadding<Sender<ServiceDiscoveryRequest>>,
@@ -55,19 +56,19 @@ pub struct MulticastServiceDiscoveryState
     default_reply: ServiceDiscoveryReply,
     uid: u32,
     running: bool,
-    listen: bool
+    listen: bool,
 }
 
 pub type ServiceDiscoveryReactor = (Poll, MulticastServiceDiscoveryState);
 
-impl MulticastServiceDiscoveryState
-{
-    pub(crate) fn new(config: MulticastServiceDiscoveryConfig,
-               internal_tx: Sender<ServiceDiscoveryRequest>) -> Result<ServiceDiscoveryReactor> {
+impl MulticastServiceDiscoveryState {
+    pub(crate) fn new(
+        config: MulticastServiceDiscoveryConfig,
+        internal_tx: Sender<ServiceDiscoveryRequest>,
+    ) -> Result<ServiceDiscoveryReactor> {
         let poll: Poll = Poll::new()?;
 
-        let seek_request =
-            serde_json::to_string(&ServiceDiscoveryMessage::Request)?;
+        let seek_request = serde_json::to_string(&ServiceDiscoveryMessage::Request)?;
 
         let interests = get_interests();
         let mut server_socket = UdpSocket::bind(config.seeking_addr)?;
@@ -88,14 +89,14 @@ impl MulticastServiceDiscoveryState
             default_reply: ServiceDiscoveryReply::default(),
             uid,
             listen: false,
-            running: true
+            running: true,
         };
 
         Ok((poll, state))
     }
 
     fn readable(&mut self, buf: &mut [u8], poll: &mut Poll) -> Result<()> {
-        if let Ok((bytes_read, peer_addr)) = self.server_socket.recv_from(buf) {
+        if let Ok((_bytes_read, peer_addr)) = self.server_socket.recv_from(buf) {
             let msg: ServiceDiscoveryMessage = if let Ok(msg) = serde_json::from_slice(buf) {
                 msg
             } else {
@@ -106,13 +107,17 @@ impl MulticastServiceDiscoveryState
                 ServiceDiscoveryMessage::Request => {
                     if self.listen {
                         self.seeker_replies.push_back(peer_addr);
-                        poll.registry().reregister(&mut self.server_socket,
-                                                   ON_DISCOVERY,
-                                                   Interest::WRITABLE)?;
+                        poll.registry().reregister(
+                            &mut self.server_socket,
+                            ON_DISCOVERY,
+                            Interest::WRITABLE,
+                        )?;
                     } else {
-                        poll.registry().reregister(&mut self.server_socket,
-                                                   ON_DISCOVERY,
-                                                   Interest::READABLE)?;
+                        poll.registry().reregister(
+                            &mut self.server_socket,
+                            ON_DISCOVERY,
+                            Interest::READABLE,
+                        )?;
                     }
                 }
                 ServiceDiscoveryMessage::Response { uid, content } => {
@@ -120,9 +125,11 @@ impl MulticastServiceDiscoveryState
                         self.observers
                             .retain(|observer| observer.send(content.clone()).is_ok());
                     }
-                    poll.registry().reregister(&mut self.server_socket,
-                                               ON_DISCOVERY,
-                                               Interest::READABLE)?;
+                    poll.registry().reregister(
+                        &mut self.server_socket,
+                        ON_DISCOVERY,
+                        Interest::READABLE,
+                    )?;
                 }
             }
         }
@@ -141,12 +148,17 @@ impl MulticastServiceDiscoveryState
             while let Some(peer_addr) = self.seeker_replies.pop_front() {
                 let mut sent_bytes = 0;
                 while sent_bytes != discovery_reply.len() {
-                    if let Ok(bytes_tx) = self.server_socket.send_to(&discovery_reply[sent_bytes..], peer_addr) {
+                    if let Ok(bytes_tx) = self
+                        .server_socket
+                        .send_to(&discovery_reply[sent_bytes..], peer_addr)
+                    {
                         sent_bytes += bytes_tx;
                     } else {
-                        poll.registry().reregister(&mut self.server_socket,
-                                                   ON_DISCOVERY,
-                                                   Interest::WRITABLE)?;
+                        poll.registry().reregister(
+                            &mut self.server_socket,
+                            ON_DISCOVERY,
+                            Interest::WRITABLE,
+                        )?;
                         return Ok(());
                     }
                 }
@@ -154,22 +166,32 @@ impl MulticastServiceDiscoveryState
         } else if token == SEEK_NODES {
             let mut sent_bytes = 0;
             while sent_bytes != self.seek_request.len() {
-                if let Ok(bytes_tx) = self.server_socket
-                    .send_to(&self.seek_request[sent_bytes..], self.config.seeking_addr) {
+                if let Ok(bytes_tx) = self
+                    .server_socket
+                    .send_to(&self.seek_request[sent_bytes..], self.config.seeking_addr)
+                {
                     sent_bytes += bytes_tx;
                 } else {
-                    poll.registry().reregister(&mut self.server_socket,
-                                               SEEK_NODES,
-                                               Interest::WRITABLE)?;
+                    poll.registry().reregister(
+                        &mut self.server_socket,
+                        SEEK_NODES,
+                        Interest::WRITABLE,
+                    )?;
                     return Ok(());
                 }
             }
         }
 
-        Ok(poll.registry().reregister(&mut self.server_socket, ON_DISCOVERY, Interest::WRITABLE)?)
+        Ok(poll
+            .registry()
+            .reregister(&mut self.server_socket, ON_DISCOVERY, Interest::WRITABLE)?)
     }
 
-    pub(crate) fn event_loop(receiver: &mut Receiver<ServiceDiscoveryRequest>, mut poll: Poll, mut state: MulticastServiceDiscoveryState) -> Result<()> {
+    pub(crate) fn event_loop(
+        receiver: &mut Receiver<ServiceDiscoveryRequest>,
+        mut poll: Poll,
+        mut state: MulticastServiceDiscoveryState,
+    ) -> Result<()> {
         let mut events = Events::with_capacity(1);
         let mut buf = [0_u8; CONST_PACKET_SIZE];
 
@@ -183,7 +205,6 @@ impl MulticastServiceDiscoveryState
             dbg!(elapsed);
             dbg!(timeout);
             if elapsed >= timeout {
-
                 start = Instant::now();
             }
 
@@ -230,7 +251,11 @@ impl MulticastServiceDiscoveryState
         Ok(())
     }
 
-    fn process_internal_request(&mut self, poll: &mut Poll, msg: ServiceDiscoveryRequest) -> Option<Sender<()>> {
+    fn process_internal_request(
+        &mut self,
+        poll: &mut Poll,
+        msg: ServiceDiscoveryRequest,
+    ) -> Option<Sender<()>> {
         use ServiceDiscoveryRequest::*;
 
         match msg {
@@ -239,27 +264,31 @@ impl MulticastServiceDiscoveryState
                 self.listen = bcast_listen;
             }
             SeekPeers(tx) => {
-                match self.server_socket
-                    .send_to(&self.seek_request, self.config.seeking_addr) {
+                match self
+                    .server_socket
+                    .send_to(&self.seek_request, self.config.seeking_addr)
+                {
                     Ok(_) => {
-                        if let Err(err) = poll.registry()
-                            .reregister(&mut self.server_socket,
-                                        ON_DISCOVERY,
-                                        Interest::READABLE) {
+                        if let Err(err) = poll.registry().reregister(
+                            &mut self.server_socket,
+                            ON_DISCOVERY,
+                            Interest::READABLE,
+                        ) {
                             error!("Reregistry error for Discovery: {:?}", err);
                             return Some(tx);
                         }
                     }
-                    Err(err) => {
-                        if let Err(err) = poll.registry()
-                            .reregister(&mut self.server_socket,
-                                        SEEK_NODES,
-                                        Interest::WRITABLE) {
+                    Err(_err) => {
+                        if let Err(err) = poll.registry().reregister(
+                            &mut self.server_socket,
+                            SEEK_NODES,
+                            Interest::WRITABLE,
+                        ) {
                             error!("Reregistry error for Seeking: {:?}", err);
                             return Some(tx);
                         }
-//                        error!("General Error for Service Discovery Internal Request: {:?}", err);
-//                        return Some(tx);
+                        //                        error!("General Error for Service Discovery Internal Request: {:?}", err);
+                        //                        return Some(tx);
                     }
                     _ => {
                         error!("Unexpected state response for Service Discovery Internal Request");

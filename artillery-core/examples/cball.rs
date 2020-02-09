@@ -3,14 +3,13 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
-
 use clap::*;
-use std::path::Path;
-use uuid::Uuid;
+use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::convert::TryInto;
 use std::net::ToSocketAddrs;
+use std::path::Path;
+use uuid::Uuid;
 
 use artillery_core::prelude::*;
 use std::str::FromStr;
@@ -22,53 +21,66 @@ fn main() {
         .version(crate_version!())
         .about("Artillery Epidemic Protocol Tester")
         .arg(
-            Arg::with_name("data-folder").index(1)
+            Arg::with_name("data-folder")
+                .index(1)
                 .long("data-folder")
                 .aliases(&["data-folder"])
                 .required(true)
-                .help("State Data Folder")
+                .help("State Data Folder"),
         )
         .arg(
-            Arg::with_name("cluster-key").index(2)
+            Arg::with_name("cluster-key")
+                .index(2)
                 .long("cluster-key")
                 .aliases(&["cluster-key"])
                 .required(true)
-                .help("Cluster Key")
+                .help("Cluster Key"),
         )
         .arg(
-            Arg::with_name("listen-addr").index(3)
+            Arg::with_name("listen-addr")
+                .index(3)
                 .long("listen-addr")
                 .aliases(&["listen-addr"])
                 .required(true)
-                .help("Listen Address")
+                .help("Listen Address"),
         )
         .arg(
-            Arg::with_name("seed-node").index(4)
+            Arg::with_name("seed-node")
+                .index(4)
                 .long("seed-node")
                 .aliases(&["seed-node"])
-                .help("Seed Node")
+                .help("Seed Node"),
         )
-        .after_help("Enables Artillery epidemic protocol to be tested \
-                               in the cluster configuration")
+        .after_help(
+            "Enables Artillery epidemic protocol to be tested \
+                               in the cluster configuration",
+        )
         .get_matches();
 
-    let data_folder = matches.value_of("data-folder")
+    let data_folder = matches
+        .value_of("data-folder")
         .expect("Can't be None, required");
 
     let data_folder_path = Path::new(&data_folder);
     let host_key = read_host_key(&data_folder_path);
     warn!("Host key: {}", host_key.to_hyphenated());
 
-    let cluster_key = matches.value_of("cluster-key")
+    let cluster_key = matches
+        .value_of("cluster-key")
         .expect("Can't be None, required");
-    let listen_addr = matches.value_of("listen-addr")
+    let listen_addr = matches
+        .value_of("listen-addr")
         .expect("Can't be None, required");
     let seed_node = matches.value_of("seed-node");
 
     let config = ClusterConfig {
         cluster_key: cluster_key.as_bytes().to_vec(),
-        listen_addr: (&listen_addr as &str).to_socket_addrs().unwrap().next().unwrap(),
-        .. Default::default()
+        listen_addr: (&listen_addr as &str)
+            .to_socket_addrs()
+            .unwrap()
+            .next()
+            .unwrap(),
+        ..Default::default()
     };
 
     let cluster = Cluster::new_cluster(host_key, config).unwrap();

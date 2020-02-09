@@ -1,10 +1,10 @@
-use uuid::Uuid;
+use super::state::ArtilleryState;
 use crate::epidemic::cluster_config::ClusterConfig;
+use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
+use crate::errors::*;
 use std::net::SocketAddr;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use super::state::ArtilleryState;
-use crate::epidemic::state::{ArtilleryClusterRequest, ArtilleryClusterEvent};
-use crate::errors::*;
+use uuid::Uuid;
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
@@ -29,16 +29,20 @@ impl Cluster {
 
         Ok(Self {
             events: event_rx,
-            comm: internal_tx
+            comm: internal_tx,
         })
     }
 
     pub fn add_seed_node(&self, addr: SocketAddr) {
-        self.comm.send(ArtilleryClusterRequest::AddSeed(addr)).unwrap();
+        self.comm
+            .send(ArtilleryClusterRequest::AddSeed(addr))
+            .unwrap();
     }
 
     pub fn leave_cluster(&self) {
-        self.comm.send(ArtilleryClusterRequest::LeaveCluster).unwrap();
+        self.comm
+            .send(ArtilleryClusterRequest::LeaveCluster)
+            .unwrap();
     }
 }
 
