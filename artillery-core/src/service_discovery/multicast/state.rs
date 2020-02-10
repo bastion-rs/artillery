@@ -37,6 +37,7 @@ pub(crate) enum ServiceDiscoveryRequest {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "t", content = "c")]
 enum ServiceDiscoveryMessage {
     Request,
     Response {
@@ -69,22 +70,21 @@ impl MulticastServiceDiscoveryState {
     ) -> Result<ServiceDiscoveryReactor> {
         let poll: Poll = Poll::new()?;
 
-        let seek_request = serde_json::to_string(&ServiceDiscoveryMessage::Request)?;
-
 //        let interests = get_interests();
-        let interests = get_interests();
+//        let interests = get_interests();
         let mut server_socket = UdpSocket::bind(config.discovery_addr)?;
         server_socket.set_broadcast(true)?;
 
         poll.registry()
-            .register(&mut server_socket, ON_DISCOVERY, interests)?;
+            .register(&mut server_socket, ON_DISCOVERY, Interest::READABLE)?;
 
         let uid = rand::random();
+        let seek_request = serde_json::to_string(&ServiceDiscoveryMessage::Request)?;
 
         let state = MulticastServiceDiscoveryState {
             config,
             server_socket,
-            seek_request: seek_request.into_bytes(),
+            seek_request: seek_request.as_bytes().into(),
             observers: Vec::new(),
             seeker_replies: VecDeque::new(),
             default_reply: discovery_reply,
@@ -97,12 +97,15 @@ impl MulticastServiceDiscoveryState {
     }
 
     fn readable(&mut self, buf: &mut [u8], poll: &mut Poll) -> Result<()> {
-        debug!("READABLE");
         if let Ok((_bytes_read, peer_addr)) = self.server_socket.recv_from(buf) {
-            debug!("Readable received");
-            let msg: ServiceDiscoveryMessage = if let Ok(msg) = serde_json::from_slice(buf) {
+            debug!("Readable received.");
+            let serialized = std::str::from_utf8(buf)?.to_string().trim().to_string();
+            let serialized = serialized.trim_matches(char::from(0x00));
+            let msg: ServiceDiscoveryMessage = if let Ok(msg) = serde_json::from_str(serialized) {
+                debug!("Message was: {:?}", msg);
                 msg
             } else {
+                debug!("Decoding failure");
                 return Ok(());
             };
 
@@ -111,6 +114,7 @@ impl MulticastServiceDiscoveryState {
             match msg {
                 ServiceDiscoveryMessage::Request => {
                     if self.listen {
+                        dbg!("listen");
                         self.seeker_replies.push_back(peer_addr);
                         poll.registry().reregister(
                             &mut self.server_socket,
@@ -118,6 +122,7 @@ impl MulticastServiceDiscoveryState {
                             Interest::WRITABLE,
                         )?;
                     } else {
+                        dbg!("seek");
                         poll.registry().reregister(
                             &mut self.server_socket,
                             ON_DISCOVERY,
@@ -282,7 +287,7 @@ impl MulticastServiceDiscoveryState {
                     .send_to(&self.seek_request, self.config.seeking_addr)
                 {
                     Ok(_) => {
-                        dbg!("BROADCAST SENT");
+                        dbg!("SENT");
                         if let Err(err) = poll.registry().reregister(
                             &mut self.server_socket,
                             ON_DISCOVERY,

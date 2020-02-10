@@ -22,6 +22,8 @@ pub enum ArtilleryError {
     ReceiveError(String),
     #[fail(display = "Artillery :: Unexpected Error: {}", _0)]
     UnexpectedError(String),
+    #[fail(display = "Artillery :: Decoding Error: {}", _0)]
+    DecodingError(String),
 }
 
 impl From<io::Error> for ArtilleryError {
@@ -47,6 +49,13 @@ impl From<std::sync::mpsc::RecvError> for ArtilleryError {
         ArtilleryError::ReceiveError(e.to_string())
     }
 }
+
+impl From<std::str::Utf8Error> for ArtilleryError {
+    fn from(e: std::str::Utf8Error) -> Self {
+        ArtilleryError::DecodingError(e.to_string())
+    }
+}
+
 
 #[macro_export]
 macro_rules! bail {

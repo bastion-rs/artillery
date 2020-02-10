@@ -40,6 +40,14 @@ fn main() {
                 .aliases(&["data-folder"])
                 .required(true)
                 .help("Node State Data Folder"),
+
+        )
+        .arg(
+        Arg::with_name("seeker")
+            .index(2)
+            .long("seeker")
+            .aliases(&["seeker"])
+            .help("Seeker or Listener"),
         )
         .after_help(
             "Enables Artillery Service Discovery + Epidemic Protocol to be tested \
@@ -50,6 +58,7 @@ fn main() {
     let data_folder = matches
         .value_of("node-data")
         .expect("Can't be None, required");
+    let seeker = matches.value_of("seeker");
 
     let data_folder_path = Path::new(&data_folder);
     let host_key = read_host_key(&data_folder_path);
@@ -59,14 +68,21 @@ fn main() {
         {
             let sd_port = get_port();
             dbg!(sd_port.clone());
-            discovery_config::MulticastServiceDiscoveryConfig {
-                timeout_delta: Duration::seconds(1),
-                discovery_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
-                seeking_addr: SocketAddr::from(([192, 168, 1, 255], sd_port)),
+            if let Some(_) = seeker {
+                discovery_config::MulticastServiceDiscoveryConfig {
+                    timeout_delta: Duration::seconds(1),
+                    discovery_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
+                    seeking_addr: SocketAddr::from(([0, 0, 0, 0], CONST_SERVICE_DISCOVERY_PORT)),
+                }
+            } else {
+                discovery_config::MulticastServiceDiscoveryConfig {
+                    timeout_delta: Duration::seconds(1),
+                    discovery_addr: SocketAddr::from(([0, 0, 0, 0], CONST_SERVICE_DISCOVERY_PORT)),
+                    seeking_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
+                }
             }
-
-//            discovery_config::MulticastServiceDiscoveryConfig::default()
         };
+
     let epidemic_sd_config = ExampleSDReply {
         ip: "127.0.0.1".into(),
         port: get_port(),
@@ -87,8 +103,12 @@ fn main() {
 
     let (tx, discoveries) = channel();
     sd.register_seeker(tx).unwrap();
-//    sd.set_listen_for_peers(true).unwrap();
-    sd.seek_peers().unwrap();
+    if let Some(_) = seeker {
+        sd.seek_peers().unwrap();
+    } else {
+        sd.set_listen_for_peers(true).unwrap();
+    }
+
 
     std::thread::Builder::new()
         .name("cluster-event-poller".to_string())
