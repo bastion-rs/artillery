@@ -15,9 +15,6 @@ impl Default for MulticastServiceDiscoveryConfig {
 
         Self {
             timeout_delta: Duration::seconds(1),
-            //            packet_size: CONST_PACKET_SIZE,
-            //            ping_request_host_count: 3,
-            //            discovery_timeout: Duration::seconds(3),
             seeking_addr: seeking_addr.to_socket_addrs().unwrap().next().unwrap(),
             discovery_addr: discovery_addr.to_socket_addrs().unwrap().next().unwrap(),
         }

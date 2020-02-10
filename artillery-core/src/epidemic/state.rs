@@ -134,10 +134,7 @@ impl ArtilleryState {
         loop {
             let elapsed = start.elapsed();
 
-            dbg!(elapsed);
-            dbg!(timeout);
             if elapsed >= timeout {
-                debug!("Seeds are enqueued!");
                 state.enqueue_seed_nodes();
                 state.enqueue_random_ping();
                 start = Instant::now();

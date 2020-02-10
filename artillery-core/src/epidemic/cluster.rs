@@ -46,6 +46,9 @@ impl Cluster {
     }
 }
 
+unsafe impl Send for Cluster {}
+unsafe impl Sync for Cluster {}
+
 impl Drop for Cluster {
     fn drop(&mut self) {
         let (tx, rx) = channel();

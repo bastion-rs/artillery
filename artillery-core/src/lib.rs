@@ -13,6 +13,8 @@ mod epidemic;
 mod service_discovery;
 
 pub mod prelude {
+    pub use super::constants::*;
+    pub use super::service_discovery::multicast::*;
     pub use super::epidemic::cluster::*;
     pub use super::epidemic::cluster_config::*;
 }
