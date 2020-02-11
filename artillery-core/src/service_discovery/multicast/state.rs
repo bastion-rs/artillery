@@ -98,23 +98,17 @@ impl MulticastServiceDiscoveryState {
 
     fn readable(&mut self, buf: &mut [u8], poll: &mut Poll) -> Result<()> {
         if let Ok((_bytes_read, peer_addr)) = self.server_socket.recv_from(buf) {
-            debug!("Readable received.");
             let serialized = std::str::from_utf8(buf)?.to_string().trim().to_string();
             let serialized = serialized.trim_matches(char::from(0x00));
             let msg: ServiceDiscoveryMessage = if let Ok(msg) = serde_json::from_str(serialized) {
-                debug!("Message was: {:?}", msg);
                 msg
             } else {
-                debug!("Decoding failure");
                 return Ok(());
             };
-
-            dbg!(msg.clone());
 
             match msg {
                 ServiceDiscoveryMessage::Request => {
                     if self.listen {
-                        dbg!("listen");
                         self.seeker_replies.push_back(peer_addr);
                         poll.registry().reregister(
                             &mut self.server_socket,
@@ -122,7 +116,6 @@ impl MulticastServiceDiscoveryState {
                             Interest::WRITABLE,
                         )?;
                     } else {
-                        dbg!("seek");
                         poll.registry().reregister(
                             &mut self.server_socket,
                             ON_DISCOVERY,
@@ -156,7 +149,6 @@ impl MulticastServiceDiscoveryState {
             let discovery_reply = serde_json::to_vec(&reply)?;
 
             while let Some(peer_addr) = self.seeker_replies.pop_front() {
-                dbg!("HITZHERE_2");
                 let mut sent_bytes = 0;
                 while sent_bytes != discovery_reply.len() {
                     if let Ok(bytes_tx) = self
@@ -175,7 +167,6 @@ impl MulticastServiceDiscoveryState {
                 }
             }
         } else if token == SEEK_NODES {
-            dbg!("SEEK_NODES");
             let mut sent_bytes = 0;
             while sent_bytes != self.seek_request.len() {
                 if let Ok(bytes_tx) = self
@@ -215,7 +206,6 @@ impl MulticastServiceDiscoveryState {
             let elapsed = start.elapsed();
 
             if elapsed >= timeout {
-//                state.process_internal_request(&mut poll, ServiceDiscoveryRequest::SeekPeers);
                 start = Instant::now();
             }
 
@@ -244,9 +234,7 @@ impl MulticastServiceDiscoveryState {
 
             // Process inbound events
             for event in events.iter() {
-//                dbg!(event.clone());
                 if event.is_readable() && event.token() == ON_DISCOVERY {
-//                if event.token() == ON_DISCOVERY {
                     if let Err(err) = state.readable(&mut buf, &mut poll) {
                         error!("Service discovery error in READABLE: {:?}", err);
                         break;
@@ -279,15 +267,11 @@ impl MulticastServiceDiscoveryState {
                 self.listen = bcast_listen;
             }
             SeekPeers => {
-                let s = std::str::from_utf8(&self.seek_request).unwrap().to_string();
-                dbg!(s);
-
                 match self
                     .server_socket
                     .send_to(&self.seek_request, self.config.seeking_addr)
                 {
                     Ok(_) => {
-                        dbg!("SENT");
                         if let Err(err) = poll.registry().reregister(
                             &mut self.server_socket,
                             ON_DISCOVERY,
@@ -298,7 +282,6 @@ impl MulticastServiceDiscoveryState {
                         }
                     }
                     Ok(x) if x == 0 => {
-                        dbg!("NOTHING WRITTEN");
                         if let Err(err) = poll.registry().reregister(
                             &mut self.server_socket,
                             SEEK_NODES,
@@ -309,7 +292,6 @@ impl MulticastServiceDiscoveryState {
                         }
                     }
                     Err(err) => {
-                        dbg!("BROADCAST FAILED");
                         error!("General Error for Service Discovery Internal Request: {:?}", err);
                         self.running = false;
                     }

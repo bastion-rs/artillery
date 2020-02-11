@@ -4,7 +4,7 @@ pub const CONST_SERVICE_DISCOVERY_PORT: u16 = 34726;
 
 // ARTIL = 27845
 /// Default Epidemic Port
-pub const CONST_DISSEMINATION_PORT: u16 = 27845;
+pub const CONST_INFECTION_PORT: u16 = 27845;
 
 // Not sure MIO handles this correctly.
 // Behave like this is the size. Normally 512 is enough.

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artillery-ap-deployment
+  labels:
+    app: artillery-ap
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: artillery-ap
+  template:
+    metadata:
+      labels:
+        app: artillery-ap
+    spec:
+      containers:
+        - name: artillery-ap
+          image: artillery-ap:0.1.0
+          ports:
+            - containerPort: 27845

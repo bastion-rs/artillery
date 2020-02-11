@@ -6,3 +6,11 @@ pub mod cluster_config;
 pub mod member;
 pub mod membership;
 pub mod state;
+
+pub mod prelude {
+    pub use super::cluster::*;
+    pub use super::cluster_config::*;
+    pub use super::membership::*;
+    pub use super::member::*;
+    pub use super::state::*;
+}

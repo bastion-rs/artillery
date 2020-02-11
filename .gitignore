@@ -22,3 +22,6 @@ bcs
 
 # Cluster related files to be ignored
 artillery-core/statedata
+
+# Test outputs
+deployment-tests/node_state

@@ -13,7 +13,7 @@ pub struct ClusterConfig {
 
 impl Default for ClusterConfig {
     fn default() -> Self {
-        let directed = SocketAddr::from(([127, 0, 0, 1], CONST_DISSEMINATION_PORT));
+        let directed = SocketAddr::from(([127, 0, 0, 1], CONST_INFECTION_PORT));
 
         ClusterConfig {
             cluster_key: b"default".to_vec(),
