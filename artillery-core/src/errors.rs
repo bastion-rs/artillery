@@ -56,7 +56,6 @@ impl From<std::str::Utf8Error> for ArtilleryError {
     }
 }
 
-
 #[macro_export]
 macro_rules! bail {
     ($kind:expr, $e:expr) => {

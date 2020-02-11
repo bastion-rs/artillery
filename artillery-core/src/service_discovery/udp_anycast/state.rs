@@ -1,7 +1,7 @@
 use crate::constants::*;
 use crate::errors::*;
 use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
-use bastion_utils::math::random;
+
 use cuneiform_fields::arch::ArchPadding;
 use mio::net::UdpSocket;
 use mio::{Events, Interest, Poll, Token};
@@ -70,13 +70,13 @@ impl MulticastServiceDiscoveryState {
     ) -> Result<ServiceDiscoveryReactor> {
         let poll: Poll = Poll::new()?;
 
-//        let interests = get_interests();
-//        let interests = get_interests();
+        //        let interests = get_interests();
+        //        let interests = get_interests();
         let mut server_socket = UdpSocket::bind(config.discovery_addr)?;
         server_socket.set_broadcast(true)?;
 
         poll.registry()
-            .register(&mut server_socket, ON_DISCOVERY, Interest::READABLE)?;
+            .register(&mut server_socket, ON_DISCOVERY, get_interests())?;
 
         let uid = rand::random();
         let seek_request = serde_json::to_string(&ServiceDiscoveryMessage::Request)?;
@@ -281,7 +281,7 @@ impl MulticastServiceDiscoveryState {
                             self.running = false;
                         }
                     }
-                    Ok(x) if x == 0 => {
+                    Err(_err) => {
                         if let Err(err) = poll.registry().reregister(
                             &mut self.server_socket,
                             SEEK_NODES,
@@ -290,10 +290,6 @@ impl MulticastServiceDiscoveryState {
                             error!("Reregistry error for Seeking: {:?}", err);
                             self.running = false;
                         }
-                    }
-                    Err(err) => {
-                        error!("General Error for Service Discovery Internal Request: {:?}", err);
-                        self.running = false;
                     }
                 }
             }

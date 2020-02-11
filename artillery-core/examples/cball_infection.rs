@@ -11,7 +11,7 @@ use std::net::ToSocketAddrs;
 use std::path::Path;
 use uuid::Uuid;
 
-use artillery_core::prelude::*;
+use artillery_core::epidemic::prelude::*;
 use std::str::FromStr;
 
 fn main() {

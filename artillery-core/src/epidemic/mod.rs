@@ -10,7 +10,7 @@ pub mod state;
 pub mod prelude {
     pub use super::cluster::*;
     pub use super::cluster_config::*;
-    pub use super::membership::*;
     pub use super::member::*;
+    pub use super::membership::*;
     pub use super::state::*;
 }

@@ -1,20 +1,24 @@
 use crate::errors::*;
 use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
 use crate::service_discovery::udp_anycast::state::MulticastServiceDiscoveryState;
-use crate::service_discovery::udp_anycast::state::{ServiceDiscoveryReply, ServiceDiscoveryRequest};
+use crate::service_discovery::udp_anycast::state::{
+    ServiceDiscoveryReply, ServiceDiscoveryRequest,
+};
 use cuneiform_fields::arch::ArchPadding;
 use std::sync::mpsc;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Sender};
 
 pub struct MulticastServiceDiscovery {
     comm: ArchPadding<Sender<ServiceDiscoveryRequest>>,
 }
 
 impl MulticastServiceDiscovery {
-    pub fn new_service_discovery(config: MulticastServiceDiscoveryConfig, discovery_reply: ServiceDiscoveryReply) -> Result<Self> {
+    pub fn new_service_discovery(
+        config: MulticastServiceDiscoveryConfig,
+        discovery_reply: ServiceDiscoveryReply,
+    ) -> Result<Self> {
         let (internal_tx, mut internal_rx) = channel::<ServiceDiscoveryRequest>();
-        let (poll, state) =
-            MulticastServiceDiscoveryState::new(config, discovery_reply)?;
+        let (poll, state) = MulticastServiceDiscoveryState::new(config, discovery_reply)?;
 
         debug!("Starting Artillery Multicast SD");
         std::thread::Builder::new()
@@ -32,10 +36,7 @@ impl MulticastServiceDiscovery {
 
     /// Register a new observer to be notified whenever we
     /// successfully find peers by interrogating the network.
-    pub fn register_seeker(
-        &self,
-        observer: mpsc::Sender<ServiceDiscoveryReply>,
-    ) -> Result<()> {
+    pub fn register_seeker(&self, observer: mpsc::Sender<ServiceDiscoveryReply>) -> Result<()> {
         let observer = ArchPadding::new(observer);
         Ok(self
             .comm
@@ -45,7 +46,9 @@ impl MulticastServiceDiscovery {
     /// Enable or disable listening and responding to peers searching for us. This will
     /// correspondingly allow or disallow others from finding us by interrogating the network.
     pub fn set_listen_for_peers(&self, listen: bool) -> Result<()> {
-        Ok(self.comm.send(ServiceDiscoveryRequest::SetBroadcastListen(listen))?)
+        Ok(self
+            .comm
+            .send(ServiceDiscoveryRequest::SetBroadcastListen(listen))?)
     }
 
     /// Explore the network to find nodes using udp_anycast SD.
@@ -54,8 +57,14 @@ impl MulticastServiceDiscovery {
     }
 
     /// Shutdown Service Discovery
-    pub fn shutdown(&self) -> Result<()> {
-        Ok(std::mem::drop(self))
+    pub fn shutdown(&mut self) -> Result<()> {
+        Ok(self.discovery_exit())
+    }
+
+    fn discovery_exit(&mut self) {
+        let (tx, rx) = channel();
+        self.comm.send(ServiceDiscoveryRequest::Exit(tx)).unwrap();
+        rx.recv().unwrap();
     }
 }
 
@@ -64,10 +73,6 @@ unsafe impl Sync for MulticastServiceDiscovery {}
 
 impl Drop for MulticastServiceDiscovery {
     fn drop(&mut self) {
-        let (tx, rx) = channel();
-
-        self.comm.send(ServiceDiscoveryRequest::Exit(tx)).unwrap();
-
-        rx.recv().unwrap();
+        self.discovery_exit();
     }
 }

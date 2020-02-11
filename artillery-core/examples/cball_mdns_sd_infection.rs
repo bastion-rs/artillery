@@ -7,25 +7,23 @@ use clap::*;
 use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::net::{ToSocketAddrs, SocketAddr};
+use std::net::ToSocketAddrs;
 use std::path::Path;
 use uuid::Uuid;
 
-use std::str::FromStr;
+use artillery_core::epidemic::prelude::*;
+use artillery_core::service_discovery::mdns::prelude::*;
+
+use once_cell::sync::OnceCell;
 use serde::*;
-use bastion_utils::math;
-use once_cell::sync::{Lazy, OnceCell};
-use std::sync::mpsc::channel;
+
 use std::thread;
 use std::time::Duration;
-use artillery_core::service_discovery::mdns::prelude::*;
-use artillery_core::epidemic::prelude::*;
-use artillery_core::constants::CONST_INFECTION_PORT;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 struct ExampleSDReply {
     ip: String,
-    port: u16
+    port: u16,
 }
 
 fn main() {
@@ -41,7 +39,6 @@ fn main() {
                 .aliases(&["data-folder"])
                 .required(true)
                 .help("Node State Data Folder"),
-
         )
         .after_help(
             "Enables Artillery MDNS Service Discovery + Epidemic Protocol to be tested \
@@ -63,17 +60,14 @@ fn main() {
         config.local_service_addr.set_port(this_node_cluster_port);
         config
     };
-    let sd =
-        MDNSServiceDiscovery::new_service_discovery(sd_config).unwrap();
+    let sd = MDNSServiceDiscovery::new_service_discovery(sd_config).unwrap();
 
     let this_node_cluster_listen_addr = format!("127.0.0.1:{}", this_node_cluster_port);
     let cluster = get_cluster(this_node_cluster_listen_addr.as_str(), host_key);
 
     std::thread::Builder::new()
         .name("cluster-event-poller".to_string())
-        .spawn(move || {
-            poll_cluster_events(this_node_cluster_listen_addr.as_str(), host_key)
-        })
+        .spawn(move || poll_cluster_events(this_node_cluster_listen_addr.as_str(), host_key))
         .expect("cannot start cluster-event-poller");
 
     thread::sleep(Duration::from_secs(1));
@@ -86,8 +80,7 @@ fn main() {
 
 fn poll_cluster_events(listen_addr: &str, host_key: Uuid) {
     warn!("STARTED: Event Poller");
-    for (members, event) in
-        get_cluster(listen_addr, host_key).events.iter() {
+    for (members, event) in get_cluster(listen_addr, host_key).events.iter() {
         warn!("");
         warn!(" CLUSTER EVENT ");
         warn!("===============");
@@ -126,10 +119,10 @@ fn get_port() -> u16 {
     let port: u16 = rng.gen();
     if port > 1025 && port < 65535 {
         port
-    } else { get_port() }
+    } else {
+        get_port()
+    }
 }
-
-
 
 #[inline]
 fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
@@ -148,4 +141,3 @@ fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
         Cluster::new_cluster(host_key, config).unwrap()
     })
 }
-

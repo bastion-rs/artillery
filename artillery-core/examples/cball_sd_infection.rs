@@ -7,26 +7,24 @@ use clap::*;
 use std::convert::TryInto;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::net::{ToSocketAddrs, SocketAddr};
+use std::net::{SocketAddr, ToSocketAddrs};
 use std::path::Path;
 use uuid::Uuid;
 
-use artillery_core::prelude::*;
-use std::str::FromStr;
-use serde::*;
-use bastion_utils::math;
-use once_cell::sync::{Lazy, OnceCell};
-use std::sync::mpsc::channel;
-use std::thread;
-use chrono::Duration;
-use artillery_core::service_discovery::udp_anycast::prelude::*;
 use artillery_core::constants::*;
 use artillery_core::epidemic::prelude::*;
+use artillery_core::service_discovery::udp_anycast::prelude::*;
+
+use chrono::Duration;
+use once_cell::sync::OnceCell;
+use serde::*;
+use std::str::FromStr;
+use std::sync::mpsc::channel;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
 struct ExampleSDReply {
     ip: String,
-    port: u16
+    port: u16,
 }
 
 fn main() {
@@ -42,14 +40,13 @@ fn main() {
                 .aliases(&["data-folder"])
                 .required(true)
                 .help("Node State Data Folder"),
-
         )
         .arg(
-        Arg::with_name("seeker")
-            .index(2)
-            .long("seeker")
-            .aliases(&["seeker"])
-            .help("Seeker or Listener"),
+            Arg::with_name("seeker")
+                .index(2)
+                .long("seeker")
+                .aliases(&["seeker"])
+                .help("Seeker or Listener"),
         )
         .after_help(
             "Enables Artillery Service Discovery + Epidemic Protocol to be tested \
@@ -66,40 +63,36 @@ fn main() {
     let host_key = read_host_key(&data_folder_path);
     warn!("Host key: {}", host_key.to_hyphenated());
 
-    let service_discovery =
-        {
-            let sd_port = get_port();
-            if let Some(_) = seeker {
-                MulticastServiceDiscoveryConfig {
-                    timeout_delta: Duration::seconds(1),
-                    discovery_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
-                    seeking_addr: SocketAddr::from(([0, 0, 0, 0], CONST_SERVICE_DISCOVERY_PORT)),
-                }
-            } else {
-                MulticastServiceDiscoveryConfig {
-                    timeout_delta: Duration::seconds(1),
-                    discovery_addr: SocketAddr::from(([0, 0, 0, 0], CONST_SERVICE_DISCOVERY_PORT)),
-                    seeking_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
-                }
+    let service_discovery = {
+        let sd_port = get_port();
+        if let Some(_) = seeker {
+            MulticastServiceDiscoveryConfig {
+                timeout_delta: Duration::seconds(1),
+                discovery_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
+                seeking_addr: SocketAddr::from(([0, 0, 0, 0], CONST_SERVICE_DISCOVERY_PORT)),
             }
-        };
+        } else {
+            MulticastServiceDiscoveryConfig {
+                timeout_delta: Duration::seconds(1),
+                discovery_addr: SocketAddr::from(([0, 0, 0, 0], CONST_SERVICE_DISCOVERY_PORT)),
+                seeking_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
+            }
+        }
+    };
 
     let epidemic_sd_config = ExampleSDReply {
         ip: "127.0.0.1".into(),
         port: get_port(),
     };
 
-    let reply =
-        ServiceDiscoveryReply {
-            serialized_data: serde_json::to_string(&epidemic_sd_config).unwrap()
-        };
+    let reply = ServiceDiscoveryReply {
+        serialized_data: serde_json::to_string(&epidemic_sd_config).unwrap(),
+    };
 
-    let sd =
-        MulticastServiceDiscovery::new_service_discovery(
-            service_discovery, reply).unwrap();
+    let sd = MulticastServiceDiscovery::new_service_discovery(service_discovery, reply).unwrap();
 
     let listen_addr = format!("{}:{}", "127.0.0.1", epidemic_sd_config.port);
-    let listen_addr_sd = listen_addr.clone();
+    let _listen_addr_sd = listen_addr.clone();
     let cluster = get_cluster(listen_addr.as_str(), host_key);
 
     let (tx, discoveries) = channel();
@@ -112,9 +105,7 @@ fn main() {
 
     std::thread::Builder::new()
         .name("cluster-event-poller".to_string())
-        .spawn(move || {
-            poll_cluster_events(listen_addr.as_str(), host_key)
-        })
+        .spawn(move || poll_cluster_events(listen_addr.as_str(), host_key))
         .expect("cannot start cluster-event-poller");
 
     for discovery in discoveries.iter() {
@@ -122,16 +113,14 @@ fn main() {
         if discovery.port != epidemic_sd_config.port {
             debug!("Seed node address came");
             let seed_node = format!("{}:{}", epidemic_sd_config.ip, discovery.port);
-            cluster
-                .add_seed_node(FromStr::from_str(&seed_node).unwrap());
+            cluster.add_seed_node(FromStr::from_str(&seed_node).unwrap());
         }
     }
 }
 
 fn poll_cluster_events(listen_addr: &str, host_key: Uuid) {
     warn!("STARTED: Event Poller");
-    for (members, event) in
-        get_cluster(listen_addr, host_key).events.iter() {
+    for (members, event) in get_cluster(listen_addr, host_key).events.iter() {
         warn!("");
         warn!(" CLUSTER EVENT ");
         warn!("===============");
@@ -169,10 +158,10 @@ fn get_port() -> u16 {
     let port: u16 = rng.gen();
     if port > 1025 && port < 65535 {
         port
-    } else { get_port() }
+    } else {
+        get_port()
+    }
 }
-
-
 
 #[inline]
 fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
@@ -191,4 +180,3 @@ fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
         Cluster::new_cluster(host_key, config).unwrap()
     })
 }
-
