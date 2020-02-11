@@ -2,11 +2,16 @@
 extern crate log;
 
 #[macro_use]
-mod errors;
+pub mod errors;
 
-mod epidemic;
+/// Constants of the Artillery
+pub mod constants;
 
-pub mod prelude {
-    pub use super::epidemic::cluster::*;
-    pub use super::epidemic::cluster_config::*;
-}
+/// Infection-style clustering
+pub mod epidemic;
+
+/// Service discovery strategies
+pub mod service_discovery;
+
+/// Cluster types
+pub mod cluster;

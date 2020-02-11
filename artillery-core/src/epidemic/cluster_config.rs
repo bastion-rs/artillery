@@ -1,6 +1,6 @@
+use crate::constants::*;
 use chrono::Duration;
-use std::net::{ToSocketAddrs, SocketAddr};
-use super::constants::*;
+use std::net::{SocketAddr, ToSocketAddrs};
 
 pub struct ClusterConfig {
     pub cluster_key: Vec<u8>,
@@ -13,7 +13,7 @@ pub struct ClusterConfig {
 
 impl Default for ClusterConfig {
     fn default() -> Self {
-        let directed = SocketAddr::from(([127, 0, 0, 1], CONST_DISSEMINATION_PORT));
+        let directed = SocketAddr::from(([127, 0, 0, 1], CONST_INFECTION_PORT));
 
         ClusterConfig {
             cluster_key: b"default".to_vec(),
