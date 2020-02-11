@@ -1,4 +1,4 @@
-use crate::service_discovery::multicast::prelude::*;
+use crate::service_discovery::udp_anycast::prelude::*;
 use crate::epidemic::prelude::*;
 
 #[derive(Default)]

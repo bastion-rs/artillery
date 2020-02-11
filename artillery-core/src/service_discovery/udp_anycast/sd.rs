@@ -1,7 +1,7 @@
 use crate::errors::*;
-use crate::service_discovery::multicast::discovery_config::MulticastServiceDiscoveryConfig;
-use crate::service_discovery::multicast::state::MulticastServiceDiscoveryState;
-use crate::service_discovery::multicast::state::{ServiceDiscoveryReply, ServiceDiscoveryRequest};
+use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
+use crate::service_discovery::udp_anycast::state::MulticastServiceDiscoveryState;
+use crate::service_discovery::udp_anycast::state::{ServiceDiscoveryReply, ServiceDiscoveryRequest};
 use cuneiform_fields::arch::ArchPadding;
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, Sender, Receiver};
@@ -23,7 +23,7 @@ impl MulticastServiceDiscovery {
                 MulticastServiceDiscoveryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
             })
-            .expect("cannot start multicast service discovery state thread");
+            .expect("cannot start udp_anycast service discovery state thread");
 
         Ok(Self {
             comm: ArchPadding::new(internal_tx),
@@ -48,7 +48,7 @@ impl MulticastServiceDiscovery {
         Ok(self.comm.send(ServiceDiscoveryRequest::SetBroadcastListen(listen))?)
     }
 
-    /// Explore the network to find nodes using multicast SD.
+    /// Explore the network to find nodes using udp_anycast SD.
     pub fn seek_peers(&self) -> Result<()> {
         Ok(self.comm.send(ServiceDiscoveryRequest::SeekPeers)?)
     }

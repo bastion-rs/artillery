@@ -19,7 +19,7 @@ use once_cell::sync::{Lazy, OnceCell};
 use std::sync::mpsc::channel;
 use std::thread;
 use chrono::Duration;
-use artillery_core::service_discovery::multicast::prelude::*;
+use artillery_core::service_discovery::udp_anycast::prelude::*;
 use artillery_core::constants::*;
 use artillery_core::epidemic::prelude::*;
 

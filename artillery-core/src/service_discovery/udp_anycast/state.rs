@@ -1,6 +1,6 @@
 use crate::constants::*;
 use crate::errors::*;
-use crate::service_discovery::multicast::discovery_config::MulticastServiceDiscoveryConfig;
+use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
 use bastion_utils::math::random;
 use cuneiform_fields::arch::ArchPadding;
 use mio::net::UdpSocket;
@@ -210,7 +210,7 @@ impl MulticastServiceDiscoveryState {
             }
 
             if !state.running {
-                debug!("Stopping artillery multicast service discovery evloop");
+                debug!("Stopping artillery udp_anycast service discovery evloop");
                 break;
             }
 

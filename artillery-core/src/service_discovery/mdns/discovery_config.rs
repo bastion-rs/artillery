@@ -13,7 +13,7 @@ impl Default for MDNSServiceDiscoveryConfig {
             SocketAddr::from(([127, 0, 0, 1], CONST_INFECTION_PORT));
 
         Self {
-            reply_ttl: Duration::from_millis(10),
+            reply_ttl: Duration::from_secs(120),
             local_service_addr
         }
     }
