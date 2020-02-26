@@ -5,6 +5,9 @@ use crate::errors::*;
 use std::net::SocketAddr;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use uuid::Uuid;
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
@@ -43,6 +46,19 @@ impl Cluster {
         self.comm
             .send(ArtilleryClusterRequest::LeaveCluster)
             .unwrap();
+    }
+}
+
+impl Future for Cluster {
+    type Output = ArtilleryClusterEvent;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        loop {
+            return match self.events.recv() {
+                Ok(kv) => Poll::Ready(kv),
+                Err(_) => Poll::Pending
+            }
+        }
     }
 }
 

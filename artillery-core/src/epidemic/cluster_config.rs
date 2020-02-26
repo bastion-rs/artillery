@@ -2,6 +2,7 @@ use crate::constants::*;
 use chrono::Duration;
 use std::net::{SocketAddr, ToSocketAddrs};
 
+#[derive(Debug, Clone)]
 pub struct ClusterConfig {
     pub cluster_key: Vec<u8>,
     pub ping_interval: Duration,
