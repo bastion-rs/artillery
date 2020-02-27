@@ -203,4 +203,19 @@ impl ArtilleryMemberList {
     pub fn add_member(&mut self, member: ArtilleryMember) {
         self.members.push(member)
     }
+
+    /// get_member will return artillery member if the given uuid is matches with any of the
+    /// member in the cluster.
+    pub fn get_member(&self, id: &Uuid) -> Option<ArtilleryMember> {
+        let member: Vec<_> = self
+            .members
+            .iter()
+            .filter(|&m| m.host_key() == *id)
+            .collect();
+
+        if member.is_empty() {
+            return None;
+        }
+        Some(member[0].clone())
+    }
 }

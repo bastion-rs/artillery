@@ -39,6 +39,10 @@ impl Cluster {
             .unwrap();
     }
 
+    pub fn send_payload(&self, id: Uuid, msg: String) {
+        self.comm.send(ArtilleryClusterRequest::Payload(id, msg));
+    }
+
     pub fn leave_cluster(&self) {
         self.comm
             .send(ArtilleryClusterRequest::LeaveCluster)
