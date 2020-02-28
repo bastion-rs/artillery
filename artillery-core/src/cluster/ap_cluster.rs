@@ -61,13 +61,18 @@ impl ArtilleryAPCluster {
 
     pub fn launch(&self) -> impl Future<Output=()> + '_ {
         let config = self.config.clone();
+        let events = self.service_discovery().events();
+        let cluster = self.cluster.clone();
 
         async {
-            for discovery in self.service_discovery().events.iter() {
-                if discovery.get().port() != config.sd_config.local_service_addr.port() {
-                    self.cluster.add_seed_node(discovery.get());
-                }
-            }
+            let config_inner = config;
+            let events_inner = events;
+            let cluster_inner = cluster;
+
+            events_inner
+                .iter()
+                .filter(|discovery| discovery.get().port() != config_inner.sd_config.local_service_addr.port())
+                .for_each(|discovery| cluster_inner.add_seed_node(discovery.get()))
         }
     }
 }
