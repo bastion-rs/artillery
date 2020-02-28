@@ -6,6 +6,7 @@ use std::convert::AsRef;
 use std::net::SocketAddr;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use uuid::Uuid;
+
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
     comm: Sender<ArtilleryClusterRequest>,
@@ -52,6 +53,19 @@ impl Cluster {
         self.comm
             .send(ArtilleryClusterRequest::LeaveCluster)
             .unwrap();
+    }
+}
+
+impl Future for Cluster {
+    type Output = ArtilleryClusterEvent;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        loop {
+            return match self.events.recv() {
+                Ok(kv) => Poll::Ready(kv),
+                Err(_) => Poll::Pending
+            }
+        }
     }
 }
 

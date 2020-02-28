@@ -9,10 +9,17 @@ use libp2p::{identity, Multiaddr, PeerId};
 use lightproc::proc_stack::ProcStack;
 
 use std::sync::mpsc::{channel, Receiver};
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
 
 pub struct MDNSServiceDiscovery {
     pub events: Receiver<MDNSServiceDiscoveryEvent>,
 }
+
+unsafe impl Send for MDNSServiceDiscovery {}
+unsafe impl Sync for MDNSServiceDiscovery {}
 
 impl MDNSServiceDiscovery {
     pub fn new_service_discovery(config: MDNSServiceDiscoveryConfig) -> Result<Self> {
@@ -90,5 +97,18 @@ impl MDNSServiceDiscovery {
         );
 
         Ok(Self { events: event_rx })
+    }
+}
+
+impl Future for MDNSServiceDiscovery {
+    type Output = MDNSServiceDiscoveryEvent;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        loop {
+            return match self.events.recv() {
+                Ok(kv) => Poll::Ready(kv),
+                Err(_) => Poll::Pending
+            }
+        }
     }
 }

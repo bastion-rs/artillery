@@ -2,6 +2,7 @@ use crate::constants::*;
 use std::net::SocketAddr;
 use std::time::Duration;
 
+#[derive(Debug, Clone)]
 pub struct MDNSServiceDiscoveryConfig {
     pub reply_ttl: Duration,
     pub local_service_addr: SocketAddr,
