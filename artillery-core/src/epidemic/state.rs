@@ -31,6 +31,7 @@ pub enum ArtilleryMemberEvent {
     MemberSuspectedDown(ArtilleryMember),
     MemberWentDown(ArtilleryMember),
     MemberLeft(ArtilleryMember),
+    MemberPayload(ArtilleryMember, String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -50,6 +51,7 @@ enum Request {
     Ack,
     PingRequest(EncSocketAddr),
     AckHost(ArtilleryMember),
+    Payload(Uuid, String),
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +67,7 @@ pub enum ArtilleryClusterRequest {
     React(TargetedRequest),
     LeaveCluster,
     Exit(Sender<()>),
+    Payload(Uuid, String),
 }
 
 const UDP_SERVER: Token = Token(0);
@@ -309,6 +312,26 @@ impl ArtilleryState {
                 let myself = self.members.leave();
                 enqueue_state_change(&mut self.state_changes, &[myself]);
             }
+            Payload(id, msg) => {
+                if let Some(target_peer) = self.members.get_member(&id) {
+                    if !target_peer.is_remote() {
+                        error!("Current node can't send payload to self over LAN");
+                        return None;
+                    }
+
+                    self.process_request(TargetedRequest {
+                        request: Request::Payload(id, msg),
+                        target: target_peer
+                            .remote_host()
+                            .expect("Expected target peer addr"),
+                    });
+                    return None;
+                }
+                warn!(
+                    "Unable to find the peer with an id - {} to send the payload",
+                    id
+                );
+            }
             Exit(tx) => return Some(tx),
         };
 
@@ -347,6 +370,14 @@ impl ArtilleryState {
                 AckHost(member) => {
                     self.ack_response(member.remote_host().unwrap());
                     self.mark_node_alive(member.remote_host().unwrap());
+                    None
+                }
+                Payload(peer_id, msg) => {
+                    if let Some(member) = self.members.get_member(&peer_id) {
+                        self.send_member_event(ArtilleryMemberEvent::MemberPayload(member, msg));
+                    } else {
+                        warn!("Got payload request from an unknown peer {}", peer_id);
+                    }
                     None
                 }
             };
@@ -401,6 +432,7 @@ impl ArtilleryState {
             MemberWentDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Down),
             MemberSuspectedDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Suspect),
             MemberLeft(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Left),
+            _ => {}
         };
 
         self.event_tx
