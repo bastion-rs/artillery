@@ -1,7 +1,11 @@
-Artillery
-============
+<div align="center">
+  <img src="https://github.com/bastion-rs/artillery/blob/master/img/artillery_cropped.png"><br>
+</div>
 
-Artillery is a cluster management & distributed data protocol.
+-----------------
+
+<h1 align="center">Artillery: Cluster management & Distributed data protocol</h1>
+
 
 It contains the modules below:
 * `artillery-ddata`: Used for distributed data replication
