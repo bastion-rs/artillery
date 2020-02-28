@@ -59,9 +59,7 @@ fn main() {
     };
 
     let ap_cluster = ArtilleryAPCluster::new(ap_cluster_config).unwrap();
-    spawn_blocking(async move {
-        ap_cluster.launch()
-    }, ProcStack::default());
+    spawn_blocking(async { ap_cluster.launch().await }, ProcStack::default());
 }
 
 fn get_port() -> u16 {
