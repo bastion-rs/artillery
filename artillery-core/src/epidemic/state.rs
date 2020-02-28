@@ -314,16 +314,23 @@ impl ArtilleryState {
             }
             Payload(id, msg) => {
                 if let Some(target_peer) = self.members.get_member(&id) {
+                    if !target_peer.is_remote() {
+                        error!("Current node can't send payload to self over LAN");
+                        return None;
+                    }
+
                     self.process_request(TargetedRequest {
                         request: Request::Payload(id, msg),
-                        target: target_peer.remote_host().unwrap(), // Does this panic?
+                        target: target_peer
+                            .remote_host()
+                            .expect("Expected target peer addr"),
                     });
-                } else {
-                    warn!(
-                        "Unable to find the peer with an id - {} to send the payload",
-                        id
-                    );
+                    return None;
                 }
+                warn!(
+                    "Unable to find the peer with an id - {} to send the payload",
+                    id
+                );
             }
             Exit(tx) => return Some(tx),
         };
