@@ -12,10 +12,11 @@ use std::sync::mpsc::{channel, Receiver};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::sync::Arc;
 
 
 pub struct MDNSServiceDiscovery {
-    pub events: Receiver<MDNSServiceDiscoveryEvent>,
+    events: Arc<Receiver<MDNSServiceDiscoveryEvent>>,
 }
 
 unsafe impl Send for MDNSServiceDiscovery {}
@@ -96,7 +97,11 @@ impl MDNSServiceDiscovery {
             ProcStack::default(),
         );
 
-        Ok(Self { events: event_rx })
+        Ok(Self { events: Arc::new(event_rx) })
+    }
+
+    pub fn events(&self) -> Arc<Receiver<MDNSServiceDiscoveryEvent>> {
+        self.events.clone()
     }
 }
 

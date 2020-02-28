@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/bastion-rs/artillery/blob/master/img/artillery_cropped.png"><br>
+  <img src="https://github.com/bastion-rs/artillery/blob/master/img/artillery_cropped.png" width="512" height="512"><br>
 </div>
 
 -----------------
