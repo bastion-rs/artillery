@@ -2,10 +2,10 @@ use super::state::ArtilleryState;
 use crate::epidemic::cluster_config::ClusterConfig;
 use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
+use std::convert::AsRef;
 use std::net::SocketAddr;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use uuid::Uuid;
-
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
     comm: Sender<ArtilleryClusterRequest>,
@@ -36,6 +36,15 @@ impl Cluster {
     pub fn add_seed_node(&self, addr: SocketAddr) {
         self.comm
             .send(ArtilleryClusterRequest::AddSeed(addr))
+            .unwrap();
+    }
+
+    pub fn send_payload<T: AsRef<str>>(&self, id: Uuid, msg: T) {
+        self.comm
+            .send(ArtilleryClusterRequest::Payload(
+                id,
+                msg.as_ref().to_string(),
+            ))
             .unwrap();
     }
 
