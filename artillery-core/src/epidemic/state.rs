@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use super::cluster_config::ClusterConfig;
 use super::membership::ArtilleryMemberList;
 use crate::epidemic::member::{ArtilleryMember, ArtilleryMemberState, ArtilleryStateChange};
@@ -10,6 +9,7 @@ use mio::{Events, Interest, Poll, Token};
 use serde::*;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, Sender};
@@ -73,7 +73,6 @@ pub enum ArtilleryClusterRequest {
 
 const UDP_SERVER: Token = Token(0);
 
-
 pub struct ArtilleryEpidemic {
     host_key: Uuid,
     config: ClusterConfig,
@@ -132,7 +131,9 @@ impl ArtilleryEpidemic {
         let mut buf = [0_u8; CONST_PACKET_SIZE];
 
         let mut start = Instant::now();
-        let timeout = Duration::from_millis(u64::try_from(state.config.ping_interval.num_milliseconds())?);
+        let timeout = Duration::from_millis(u64::try_from(
+            state.config.ping_interval.num_milliseconds(),
+        )?);
 
         debug!("Starting Event Loop");
         // Our event loop.
@@ -433,7 +434,7 @@ impl ArtilleryEpidemic {
             WentUp(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Alive),
             WentDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Down),
             SuspectedDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Suspect),
-            Left(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Left)
+            Left(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Left),
         };
 
         self.event_tx

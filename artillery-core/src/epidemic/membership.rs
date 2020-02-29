@@ -94,13 +94,17 @@ impl ArtilleryMemberList {
                     ArtilleryMemberState::Alive => {
                         member.set_state(ArtilleryMemberState::Suspect);
                         suspect_members.push(member.clone());
-                    },
+                    }
                     // TODO: Config suspect timeout
-                    ArtilleryMemberState::Suspect if member.state_change_older_than(Duration::seconds(3)) => {
+                    ArtilleryMemberState::Suspect
+                        if member.state_change_older_than(Duration::seconds(3)) =>
+                    {
                         member.set_state(ArtilleryMemberState::Down);
                         down_members.push(member.clone());
-                    },
-                    ArtilleryMemberState::Suspect | ArtilleryMemberState::Down | ArtilleryMemberState::Left => {}
+                    }
+                    ArtilleryMemberState::Suspect
+                    | ArtilleryMemberState::Down
+                    | ArtilleryMemberState::Left => {}
                 }
             }
         }
@@ -147,8 +151,7 @@ impl ArtilleryMemberList {
                 match old_member_data {
                     Entry::Occupied(mut entry) => {
                         let new_member =
-                            member::most_uptodate_member_data(new_member_data, entry.get())
-                                .clone();
+                            member::most_uptodate_member_data(new_member_data, entry.get()).clone();
                         let new_host = new_member
                             .remote_host()
                             .or_else(|| entry.get().remote_host())
@@ -190,11 +193,12 @@ impl ArtilleryMemberList {
             .filter_map(|m| {
                 if m.state() == ArtilleryMemberState::Alive
                     && m.is_remote()
-                    && m.remote_host() != Some(*target) {
-                        m.remote_host()
-                    } else {
-                        None
-                    }
+                    && m.remote_host() != Some(*target)
+                {
+                    m.remote_host()
+                } else {
+                    None
+                }
             })
             .collect();
 

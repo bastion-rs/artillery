@@ -24,7 +24,8 @@ impl Cluster {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
-        let (poll, state) = ArtilleryEpidemic::new(host_key, config, event_tx, internal_tx.clone())?;
+        let (poll, state) =
+            ArtilleryEpidemic::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
         let _cluster_handle = spawn_blocking(
