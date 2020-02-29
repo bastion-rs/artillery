@@ -24,6 +24,8 @@ pub enum ArtilleryError {
     Unexpected(String),
     #[fail(display = "Artillery :: Decoding Error: {}", _0)]
     Decoding(String),
+    #[fail(display = "Artillery :: Numeric Cast Error: {}", _0)]
+    NumericCast(String),
 }
 
 impl From<io::Error> for ArtilleryError {
@@ -53,6 +55,12 @@ impl From<std::sync::mpsc::RecvError> for ArtilleryError {
 impl From<std::str::Utf8Error> for ArtilleryError {
     fn from(e: std::str::Utf8Error) -> Self {
         ArtilleryError::Decoding(e.to_string())
+    }
+}
+
+impl From<std::num::TryFromIntError> for ArtilleryError {
+    fn from(e: std::num::TryFromIntError) -> Self {
+        ArtilleryError::NumericCast(e.to_string())
     }
 }
 

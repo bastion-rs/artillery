@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use super::cluster_config::ClusterConfig;
 use super::membership::ArtilleryMemberList;
 use crate::epidemic::member::{ArtilleryMember, ArtilleryMemberState, ArtilleryStateChange};
@@ -47,9 +48,9 @@ struct EncSocketAddr(SocketAddr);
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 enum Request {
-    Ping,
+    Heartbeat,
     Ack,
-    PingRequest(EncSocketAddr),
+    Ping(EncSocketAddr),
     AckHost(ArtilleryMember),
     Payload(Uuid, String),
 }
@@ -131,7 +132,7 @@ impl ArtilleryEpidemic {
         let mut buf = [0_u8; CONST_PACKET_SIZE];
 
         let mut start = Instant::now();
-        let timeout = Duration::from_millis(state.config.ping_interval.num_milliseconds() as u64);
+        let timeout = Duration::from_millis(u64::try_from(state.config.ping_interval.num_milliseconds())?);
 
         debug!("Starting Event Loop");
         // Our event loop.
@@ -210,7 +211,8 @@ impl ArtilleryEpidemic {
         use Request::*;
 
         let timeout = Utc::now() + self.config.ping_timeout;
-        let should_add_pending = request.request == Ping;
+        // It was Ping before
+        let should_add_pending = request.request == Heartbeat;
         let message = build_message(
             &self.host_key,
             &self.config.cluster_key,
@@ -236,7 +238,7 @@ impl ArtilleryEpidemic {
         for seed_node in &self.seed_queue {
             self.request_tx
                 .send(ArtilleryClusterRequest::React(TargetedRequest {
-                    request: Request::Ping,
+                    request: Request::Heartbeat,
                     target: *seed_node,
                 }))
                 .unwrap();
@@ -247,7 +249,7 @@ impl ArtilleryEpidemic {
         if let Some(member) = self.members.next_random_member() {
             self.request_tx
                 .send(ArtilleryClusterRequest::React(TargetedRequest {
-                    request: Request::Ping,
+                    request: Request::Heartbeat,
                     target: member.remote_host().unwrap(),
                 }))
                 .unwrap();
@@ -290,7 +292,7 @@ impl ArtilleryEpidemic {
             {
                 self.request_tx
                     .send(ArtilleryClusterRequest::React(TargetedRequest {
-                        request: Request::PingRequest(EncSocketAddr::from_addr(&target_host)),
+                        request: Request::Ping(EncSocketAddr::from_addr(&target_host)),
                         target: relay,
                     }))
                     .unwrap();
@@ -348,7 +350,7 @@ impl ArtilleryEpidemic {
             self.ensure_node_is_member(src_addr, message.sender);
 
             let response = match message.request {
-                Ping => Some(TargetedRequest {
+                Heartbeat => Some(TargetedRequest {
                     request: Ack,
                     target: src_addr,
                 }),
@@ -357,11 +359,11 @@ impl ArtilleryEpidemic {
                     self.mark_node_alive(src_addr);
                     None
                 }
-                PingRequest(dest_addr) => {
+                Ping(dest_addr) => {
                     let EncSocketAddr(dest_addr) = dest_addr;
                     add_to_wait_list(&mut self.wait_list, &dest_addr, &src_addr);
                     Some(TargetedRequest {
-                        request: Ping,
+                        request: Heartbeat,
                         target: dest_addr,
                     })
                 }

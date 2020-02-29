@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use crate::constants::*;
 use crate::errors::*;
 use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
@@ -201,7 +202,7 @@ impl MulticastServiceDiscoveryState {
         let mut buf = [0_u8; CONST_PACKET_SIZE];
 
         let mut start = Instant::now();
-        let timeout = Duration::from_millis(state.config.timeout_delta.num_milliseconds() as u64);
+        let timeout = Duration::from_millis(u64::try_from(state.config.timeout_delta.num_milliseconds())?);
 
         // Our event loop.
         loop {

@@ -60,7 +60,8 @@ impl MulticastServiceDiscovery {
 
     /// Shutdown Service Discovery
     pub fn shutdown(&mut self) -> Result<()> {
-        Ok(self.discovery_exit())
+        self.discovery_exit();
+        Ok(())
     }
 
     fn discovery_exit(&mut self) {
