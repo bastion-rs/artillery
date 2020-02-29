@@ -4,7 +4,9 @@ use crate::service_discovery::udp_anycast::state::MulticastServiceDiscoveryState
 use crate::service_discovery::udp_anycast::state::{
     ServiceDiscoveryReply, ServiceDiscoveryRequest,
 };
+use bastion_executor::blocking::spawn_blocking;
 use cuneiform_fields::arch::ArchPadding;
+use lightproc::proc_stack::ProcStack;
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, Sender};
 
@@ -21,13 +23,13 @@ impl MulticastServiceDiscovery {
         let (poll, state) = MulticastServiceDiscoveryState::new(config, discovery_reply)?;
 
         debug!("Starting Artillery Multicast SD");
-        std::thread::Builder::new()
-            .name("artillery-mcast-service-discovery-state".to_string())
-            .spawn(move || {
+        let _multicast_sd_handle = spawn_blocking(
+            async move {
                 MulticastServiceDiscoveryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
-            })
-            .expect("cannot start udp_anycast service discovery state thread");
+            },
+            ProcStack::default(),
+        );
 
         Ok(Self {
             comm: ArchPadding::new(internal_tx),
@@ -51,14 +53,15 @@ impl MulticastServiceDiscovery {
             .send(ServiceDiscoveryRequest::SetBroadcastListen(listen))?)
     }
 
-    /// Explore the network to find nodes using udp_anycast SD.
+    /// Explore the network to find nodes using `udp_anycast` SD.
     pub fn seek_peers(&self) -> Result<()> {
         Ok(self.comm.send(ServiceDiscoveryRequest::SeekPeers)?)
     }
 
     /// Shutdown Service Discovery
     pub fn shutdown(&mut self) -> Result<()> {
-        Ok(self.discovery_exit())
+        self.discovery_exit();
+        Ok(())
     }
 
     fn discovery_exit(&mut self) {

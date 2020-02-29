@@ -8,12 +8,11 @@ use libp2p::multiaddr::Protocol;
 use libp2p::{identity, Multiaddr, PeerId};
 use lightproc::proc_stack::ProcStack;
 
-use std::sync::mpsc::{channel, Receiver};
+use crossbeam_channel::{unbounded, Receiver};
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
 use std::sync::Arc;
-
+use std::task::{Context, Poll};
 
 pub struct MDNSServiceDiscovery {
     events: Arc<Receiver<MDNSServiceDiscoveryEvent>>,
@@ -24,7 +23,7 @@ unsafe impl Sync for MDNSServiceDiscovery {}
 
 impl MDNSServiceDiscovery {
     pub fn new_service_discovery(config: MDNSServiceDiscoveryConfig) -> Result<Self> {
-        let (event_tx, event_rx) = channel::<MDNSServiceDiscoveryEvent>();
+        let (event_tx, event_rx) = unbounded::<MDNSServiceDiscoveryEvent>();
 
         let peer_id = PeerId::from(identity::Keypair::generate_ed25519().public());
 
@@ -97,7 +96,9 @@ impl MDNSServiceDiscovery {
             ProcStack::default(),
         );
 
-        Ok(Self { events: Arc::new(event_rx) })
+        Ok(Self {
+            events: Arc::new(event_rx),
+        })
     }
 
     pub fn events(&self) -> Arc<Receiver<MDNSServiceDiscoveryEvent>> {
@@ -108,12 +109,10 @@ impl MDNSServiceDiscovery {
 impl Future for MDNSServiceDiscovery {
     type Output = MDNSServiceDiscoveryEvent;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        loop {
-            return match self.events.recv() {
-                Ok(kv) => Poll::Ready(kv),
-                Err(_) => Poll::Pending
-            }
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
+        match self.events.recv() {
+            Ok(kv) => Poll::Ready(kv),
+            Err(_) => Poll::Pending,
         }
     }
 }

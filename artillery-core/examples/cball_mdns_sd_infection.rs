@@ -71,7 +71,7 @@ fn main() {
         .expect("cannot start cluster-event-poller");
 
     thread::sleep(Duration::from_secs(1));
-    for discovery in sd.events {
+    for discovery in sd.events().iter() {
         if discovery.get().port() != this_node_cluster_port {
             cluster.add_seed_node(discovery.get());
         }

@@ -38,7 +38,7 @@ impl ArtilleryMemberList {
     }
 
     fn mut_myself(&mut self) -> &mut ArtilleryMember {
-        for member in self.members.iter_mut() {
+        for member in &mut self.members {
             if member.is_current() {
                 return member;
             }
@@ -79,25 +79,32 @@ impl ArtilleryMemberList {
 
     pub fn time_out_nodes(
         &mut self,
-        expired_hosts: HashSet<SocketAddr>,
+        expired_hosts: &HashSet<SocketAddr>,
     ) -> (Vec<ArtilleryMember>, Vec<ArtilleryMember>) {
         let mut suspect_members = Vec::new();
         let mut down_members = Vec::new();
 
-        for member in self.members.iter_mut() {
+        for member in &mut self.members {
             if let Some(remote_host) = member.remote_host() {
                 if !expired_hosts.contains(&remote_host) {
                     continue;
                 }
 
-                if member.state() == ArtilleryMemberState::Alive {
-                    member.set_state(ArtilleryMemberState::Suspect);
-                    suspect_members.push(member.clone());
-                } else if member.state() == ArtilleryMemberState::Suspect
-                    && member.state_change_older_than(Duration::seconds(3))
-                {
-                    member.set_state(ArtilleryMemberState::Down);
-                    down_members.push(member.clone());
+                match member.state() {
+                    ArtilleryMemberState::Alive => {
+                        member.set_state(ArtilleryMemberState::Suspect);
+                        suspect_members.push(member.clone());
+                    }
+                    // TODO: Config suspect timeout
+                    ArtilleryMemberState::Suspect
+                        if member.state_change_older_than(Duration::seconds(3)) =>
+                    {
+                        member.set_state(ArtilleryMemberState::Down);
+                        down_members.push(member.clone());
+                    }
+                    ArtilleryMemberState::Suspect
+                    | ArtilleryMemberState::Down
+                    | ArtilleryMemberState::Left => {}
                 }
             }
         }
@@ -106,7 +113,7 @@ impl ArtilleryMemberList {
     }
 
     pub fn mark_node_alive(&mut self, src_addr: &SocketAddr) -> Option<ArtilleryMember> {
-        for member in self.members.iter_mut() {
+        for member in &mut self.members {
             if member.remote_host() == Some(*src_addr)
                 && member.state() != ArtilleryMemberState::Alive
             {
@@ -144,8 +151,7 @@ impl ArtilleryMemberList {
                 match old_member_data {
                     Entry::Occupied(mut entry) => {
                         let new_member =
-                            member::most_uptodate_member_data(&new_member_data, entry.get())
-                                .clone();
+                            member::most_uptodate_member_data(new_member_data, entry.get()).clone();
                         let new_host = new_member
                             .remote_host()
                             .or_else(|| entry.get().remote_host())
@@ -173,6 +179,9 @@ impl ArtilleryMemberList {
         (new_nodes, changed_nodes)
     }
 
+    ///
+    ///
+    /// Random ping enqueuing
     pub fn hosts_for_indirect_ping(
         &self,
         host_count: usize,
@@ -181,12 +190,16 @@ impl ArtilleryMemberList {
         let mut possible_members: Vec<_> = self
             .members
             .iter()
-            .filter(|m| {
-                m.state() == ArtilleryMemberState::Alive
+            .filter_map(|m| {
+                if m.state() == ArtilleryMemberState::Alive
                     && m.is_remote()
                     && m.remote_host() != Some(*target)
+                {
+                    m.remote_host()
+                } else {
+                    None
+                }
             })
-            .map(|m| m.remote_host().unwrap())
             .collect();
 
         math::shuffle_linear(&mut possible_members);
@@ -197,14 +210,15 @@ impl ArtilleryMemberList {
     pub fn has_member(&self, remote_host: &SocketAddr) -> bool {
         self.members
             .iter()
-            .any(|ref m| m.remote_host() == Some(*remote_host))
+            .any(|m| m.remote_host() == Some(*remote_host))
     }
 
     pub fn add_member(&mut self, member: ArtilleryMember) {
         self.members.push(member)
     }
 
-    /// get_member will return artillery member if the given uuid is matches with any of the
+    ///
+    /// `get_member` will return artillery member if the given uuid is matches with any of the
     /// member in the cluster.
     pub fn get_member(&self, id: &Uuid) -> Option<ArtilleryMember> {
         let member: Vec<_> = self

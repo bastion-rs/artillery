@@ -9,6 +9,7 @@ use mio::{Events, Interest, Poll, Token};
 use serde::*;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, Sender};
@@ -26,12 +27,12 @@ pub type WaitList = HashMap<SocketAddr, Vec<SocketAddr>>;
 
 #[derive(Debug)]
 pub enum ArtilleryMemberEvent {
-    MemberJoined(ArtilleryMember),
-    MemberWentUp(ArtilleryMember),
-    MemberSuspectedDown(ArtilleryMember),
-    MemberWentDown(ArtilleryMember),
-    MemberLeft(ArtilleryMember),
-    MemberPayload(ArtilleryMember, String),
+    Joined(ArtilleryMember),
+    WentUp(ArtilleryMember),
+    SuspectedDown(ArtilleryMember),
+    WentDown(ArtilleryMember),
+    Left(ArtilleryMember),
+    Payload(ArtilleryMember, String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -47,9 +48,9 @@ struct EncSocketAddr(SocketAddr);
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 enum Request {
-    Ping,
+    Heartbeat,
     Ack,
-    PingRequest(EncSocketAddr),
+    Ping(EncSocketAddr),
     AckHost(ArtilleryMember),
     Payload(Uuid, String),
 }
@@ -72,7 +73,7 @@ pub enum ArtilleryClusterRequest {
 
 const UDP_SERVER: Token = Token(0);
 
-pub struct ArtilleryState {
+pub struct ArtilleryEpidemic {
     host_key: Uuid,
     config: ClusterConfig,
     members: ArtilleryMemberList,
@@ -86,9 +87,9 @@ pub struct ArtilleryState {
     running: AtomicBool,
 }
 
-pub type ClusterReactor = (Poll, ArtilleryState);
+pub type ClusterReactor = (Poll, ArtilleryEpidemic);
 
-impl ArtilleryState {
+impl ArtilleryEpidemic {
     pub fn new(
         host_key: Uuid,
         config: ClusterConfig,
@@ -104,7 +105,7 @@ impl ArtilleryState {
 
         let me = ArtilleryMember::current(host_key);
 
-        let state = ArtilleryState {
+        let state = ArtilleryEpidemic {
             host_key,
             config,
             members: ArtilleryMemberList::new(me.clone()),
@@ -124,13 +125,15 @@ impl ArtilleryState {
     pub(crate) fn event_loop(
         receiver: &mut Receiver<ArtilleryClusterRequest>,
         mut poll: Poll,
-        mut state: ArtilleryState,
+        mut state: ArtilleryEpidemic,
     ) -> Result<()> {
         let mut events = Events::with_capacity(1);
         let mut buf = [0_u8; CONST_PACKET_SIZE];
 
         let mut start = Instant::now();
-        let timeout = Duration::from_millis(state.config.ping_interval.num_milliseconds() as u64);
+        let timeout = Duration::from_millis(u64::try_from(
+            state.config.ping_interval.num_milliseconds(),
+        )?);
 
         debug!("Starting Event Loop");
         // Our event loop.
@@ -166,8 +169,8 @@ impl ArtilleryState {
 
             // Process inbound events
             for event in events.iter() {
-                match event.token() {
-                    UDP_SERVER => loop {
+                if let UDP_SERVER = event.token() {
+                    loop {
                         match state.server_socket.recv_from(&mut buf) {
                             Ok((packet_size, source_address)) => {
                                 let message = serde_json::from_slice(&buf[..packet_size])?;
@@ -186,7 +189,7 @@ impl ArtilleryState {
                                 // If it was any other kind of error, something went
                                 // wrong and we terminate with an error.
                                 bail!(
-                                    ArtilleryError::UnexpectedError,
+                                    ArtilleryError::Unexpected,
                                     format!(
                                         "Unexpected error occured in event loop: {}",
                                         e.to_string()
@@ -194,10 +197,9 @@ impl ArtilleryState {
                                 )
                             }
                         }
-                    },
-                    _ => {
-                        warn!("Got event for unexpected token: {:?}", event);
                     }
+                } else {
+                    warn!("Got event for unexpected token: {:?}", event);
                 }
             }
         }
@@ -206,16 +208,17 @@ impl ArtilleryState {
         Ok(())
     }
 
-    fn process_request(&mut self, request: TargetedRequest) {
+    fn process_request(&mut self, request: &TargetedRequest) {
         use Request::*;
 
         let timeout = Utc::now() + self.config.ping_timeout;
-        let should_add_pending = request.request == Ping;
+        // It was Ping before
+        let should_add_pending = request.request == Heartbeat;
         let message = build_message(
             &self.host_key,
             &self.config.cluster_key,
-            request.request,
-            self.state_changes.clone(),
+            &request.request,
+            &self.state_changes,
             self.config.network_mtu,
         );
 
@@ -229,14 +232,14 @@ impl ArtilleryState {
         assert!(encoded.len() < self.config.network_mtu);
 
         let buf = encoded.as_bytes();
-        self.server_socket.send_to(&buf, request.target).unwrap();
+        self.server_socket.send_to(buf, request.target).unwrap();
     }
 
     fn enqueue_seed_nodes(&self) {
         for seed_node in &self.seed_queue {
             self.request_tx
                 .send(ArtilleryClusterRequest::React(TargetedRequest {
-                    request: Request::Ping,
+                    request: Request::Heartbeat,
                     target: *seed_node,
                 }))
                 .unwrap();
@@ -247,7 +250,7 @@ impl ArtilleryState {
         if let Some(member) = self.members.next_random_member() {
             self.request_tx
                 .send(ArtilleryClusterRequest::React(TargetedRequest {
-                    request: Request::Ping,
+                    request: Request::Heartbeat,
                     target: member.remote_host().unwrap(),
                 }))
                 .unwrap();
@@ -267,18 +270,18 @@ impl ArtilleryState {
 
         self.pending_responses = remaining;
 
-        let (suspect, down) = self.members.time_out_nodes(expired_hosts);
+        let (suspect, down) = self.members.time_out_nodes(&expired_hosts);
 
         enqueue_state_change(&mut self.state_changes, &down);
         enqueue_state_change(&mut self.state_changes, &suspect);
 
         for member in suspect {
             self.send_ping_requests(&member);
-            self.send_member_event(ArtilleryMemberEvent::MemberSuspectedDown(member.clone()));
+            self.send_member_event(ArtilleryMemberEvent::SuspectedDown(member.clone()));
         }
 
         for member in down {
-            self.send_member_event(ArtilleryMemberEvent::MemberWentDown(member.clone()));
+            self.send_member_event(ArtilleryMemberEvent::WentDown(member.clone()));
         }
     }
 
@@ -290,7 +293,7 @@ impl ArtilleryState {
             {
                 self.request_tx
                     .send(ArtilleryClusterRequest::React(TargetedRequest {
-                        request: Request::PingRequest(EncSocketAddr::from_addr(&target_host)),
+                        request: Request::Ping(EncSocketAddr::from_addr(&target_host)),
                         target: relay,
                     }))
                     .unwrap();
@@ -306,7 +309,7 @@ impl ArtilleryState {
             Respond(src_addr, message) => self.respond_to_message(src_addr, message),
             React(request) => {
                 self.prune_timed_out_responses();
-                self.process_request(request);
+                self.process_request(&request);
             }
             LeaveCluster => {
                 let myself = self.members.leave();
@@ -319,7 +322,7 @@ impl ArtilleryState {
                         return None;
                     }
 
-                    self.process_request(TargetedRequest {
+                    self.process_request(&TargetedRequest {
                         request: Request::Payload(id, msg),
                         target: target_peer
                             .remote_host()
@@ -341,16 +344,14 @@ impl ArtilleryState {
     fn respond_to_message(&mut self, src_addr: SocketAddr, message: ArtilleryMessage) {
         use Request::*;
 
-        if message.cluster_key != self.config.cluster_key {
-            error!("Mismatching cluster keys, ignoring message");
-        } else {
+        if message.cluster_key == self.config.cluster_key {
             self.apply_state_changes(message.state_changes, src_addr);
             remove_potential_seed(&mut self.seed_queue, src_addr);
 
             self.ensure_node_is_member(src_addr, message.sender);
 
             let response = match message.request {
-                Ping => Some(TargetedRequest {
+                Heartbeat => Some(TargetedRequest {
                     request: Ack,
                     target: src_addr,
                 }),
@@ -359,11 +360,11 @@ impl ArtilleryState {
                     self.mark_node_alive(src_addr);
                     None
                 }
-                PingRequest(dest_addr) => {
+                Ping(dest_addr) => {
                     let EncSocketAddr(dest_addr) = dest_addr;
                     add_to_wait_list(&mut self.wait_list, &dest_addr, &src_addr);
                     Some(TargetedRequest {
-                        request: Ping,
+                        request: Heartbeat,
                         target: dest_addr,
                     })
                 }
@@ -374,7 +375,7 @@ impl ArtilleryState {
                 }
                 Payload(peer_id, msg) => {
                     if let Some(member) = self.members.get_member(&peer_id) {
-                        self.send_member_event(ArtilleryMemberEvent::MemberPayload(member, msg));
+                        self.send_member_event(ArtilleryMemberEvent::Payload(member, msg));
                     } else {
                         warn!("Got payload request from an unknown peer {}", peer_id);
                     }
@@ -387,13 +388,15 @@ impl ArtilleryState {
                     .send(ArtilleryClusterRequest::React(response))
                     .unwrap()
             }
+        } else {
+            error!("Mismatching cluster keys, ignoring message");
         }
     }
 
     fn ack_response(&mut self, src_addr: SocketAddr) {
         let mut to_remove = Vec::new();
 
-        for &(ref t, ref addr, ref state_changes) in self.pending_responses.iter() {
+        for &(ref t, ref addr, ref state_changes) in &self.pending_responses {
             if src_addr != *addr {
                 continue;
             }
@@ -420,19 +423,18 @@ impl ArtilleryState {
 
         self.members.add_member(new_member.clone());
         enqueue_state_change(&mut self.state_changes, &[new_member.clone()]);
-        self.send_member_event(ArtilleryMemberEvent::MemberJoined(new_member));
+        self.send_member_event(ArtilleryMemberEvent::Joined(new_member));
     }
 
     fn send_member_event(&self, event: ArtilleryMemberEvent) {
         use ArtilleryMemberEvent::*;
 
         match event {
-            MemberJoined(_) => {}
-            MemberWentUp(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Alive),
-            MemberWentDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Down),
-            MemberSuspectedDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Suspect),
-            MemberLeft(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Left),
-            _ => {}
+            Joined(_) | Payload(..) => {}
+            WentUp(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Alive),
+            WentDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Down),
+            SuspectedDown(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Suspect),
+            Left(ref m) => assert_eq!(m.state(), ArtilleryMemberState::Left),
         };
 
         self.event_tx
@@ -447,7 +449,7 @@ impl ArtilleryState {
         enqueue_state_change(&mut self.state_changes, &changed);
 
         for member in new {
-            self.send_member_event(ArtilleryMemberEvent::MemberJoined(member));
+            self.send_member_event(ArtilleryMemberEvent::Joined(member));
         }
 
         for member in changed {
@@ -471,7 +473,7 @@ impl ArtilleryState {
             }
 
             enqueue_state_change(&mut self.state_changes, &[member.clone()]);
-            self.send_member_event(ArtilleryMemberEvent::MemberWentUp(member));
+            self.send_member_event(ArtilleryMemberEvent::WentUp(member));
         }
     }
 }
@@ -479,8 +481,8 @@ impl ArtilleryState {
 fn build_message(
     sender: &Uuid,
     cluster_key: &[u8],
-    request: Request,
-    state_changes: Vec<ArtilleryStateChange>,
+    request: &Request,
+    state_changes: &[ArtilleryStateChange],
     network_mtu: usize,
 ) -> ArtilleryMessage {
     let mut message = ArtilleryMessage {
@@ -523,14 +525,11 @@ fn remove_potential_seed(seed_queue: &mut Vec<SocketAddr>, src_addr: SocketAddr)
 }
 
 fn determine_member_event(member: ArtilleryMember) -> ArtilleryMemberEvent {
-    use ArtilleryMemberEvent::*;
-    use ArtilleryMemberState::*;
-
     match member.state() {
-        Alive => MemberWentUp(member),
-        Suspect => MemberSuspectedDown(member),
-        Down => MemberWentDown(member),
-        Left => MemberLeft(member),
+        ArtilleryMemberState::Alive => ArtilleryMemberEvent::WentUp(member),
+        ArtilleryMemberState::Suspect => ArtilleryMemberEvent::SuspectedDown(member),
+        ArtilleryMemberState::Down => ArtilleryMemberEvent::WentDown(member),
+        ArtilleryMemberState::Left => ArtilleryMemberEvent::Left(member),
     }
 }
 

@@ -176,6 +176,10 @@ pub fn most_uptodate_member_data<'a>(
     lhs: &'a ArtilleryMember,
     rhs: &'a ArtilleryMember,
 ) -> &'a ArtilleryMember {
+    // Don't apply clippy here.
+    // It's important bit otherwise we won't understand.
+    #![allow(clippy::match_same_arms)]
+
     let lhs_overrides = match (
         lhs.member_state,
         lhs.incarnation_number,

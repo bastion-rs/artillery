@@ -3,39 +3,28 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
-use clap::*;
-use std::convert::TryInto;
-use std::fs::File;
-use std::io::{Read, Write};
 use std::net::ToSocketAddrs;
-use std::path::Path;
+
 use uuid::Uuid;
 
 use artillery_core::epidemic::prelude::*;
 use artillery_core::service_discovery::mdns::prelude::*;
 
-use once_cell::sync::OnceCell;
-use serde::*;
+use artillery_core::cluster::ap::*;
+use futures::future;
 
-use std::thread;
-use std::time::Duration;
-use artillery_core::cluster::ap_cluster::*;
+use bastion_executor::prelude::*;
 
-use bastion_executor::blocking::spawn_blocking;
-use lightproc::proc_handle::ProcHandle;
 use lightproc::proc_stack::ProcStack;
-
-
-#[derive(Serialize, Deserialize, Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
-struct ExampleSDReply {
-    ip: String,
-    port: u16,
-}
+use std::sync::Arc;
 
 fn main() {
     pretty_env_logger::init();
 
+    // Let's find a broadcast port
     let port = get_port();
+
+    // Initialize our cluster configuration
     let ap_cluster_config = ArtilleryAPClusterConfig {
         app_name: String::from("artillery-ap"),
         node_id: Uuid::new_v4(),
@@ -58,8 +47,45 @@ fn main() {
         },
     };
 
-    let ap_cluster = ArtilleryAPCluster::new(ap_cluster_config).unwrap();
-    spawn_blocking(async { ap_cluster.launch().await }, ProcStack::default());
+    // Configure our cluster node
+    let ap_cluster = Arc::new(ArtilleryAPCluster::new(ap_cluster_config).unwrap());
+
+    // Launch the cluster node
+    run(
+        async {
+            let cluster_stack = ProcStack::default().with_pid(2);
+            let events_stack = ProcStack::default().with_pid(3);
+
+            let ap_events = ap_cluster.clone();
+
+            // Detach cluster launch
+            let cluster_handle =
+                spawn_blocking(async move { ap_cluster.launch().await }, cluster_stack);
+
+            // Detach event consumption
+            let events_handle = spawn_blocking(
+                async move {
+                    warn!("STARTED: Event Poller");
+                    for (members, event) in ap_events.cluster().clone().events.iter() {
+                        warn!("");
+                        warn!(" CLUSTER EVENT ");
+                        warn!("===============");
+                        warn!("{:?}", event);
+                        warn!("");
+
+                        for member in members {
+                            info!("MEMBER  {:?}", member);
+                        }
+                    }
+                    warn!("STOPPED: Event Poller");
+                },
+                events_stack,
+            );
+
+            future::join(events_handle, cluster_handle).await
+        },
+        ProcStack::default().with_pid(1),
+    );
 }
 
 fn get_port() -> u16 {

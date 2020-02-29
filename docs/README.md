@@ -7,6 +7,8 @@
 <h1 align="center">Artillery: Cluster management & Distributed data protocol</h1>
 
 
+# Module Structure
+
 It contains the modules below:
 * `artillery-ddata`: Used for distributed data replication
 * `artillery-core`: Contains:

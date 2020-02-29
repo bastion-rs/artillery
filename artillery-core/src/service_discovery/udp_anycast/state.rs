@@ -1,6 +1,7 @@
 use crate::constants::*;
 use crate::errors::*;
 use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
+use std::convert::TryFrom;
 
 use cuneiform_fields::arch::ArchPadding;
 use mio::net::UdpSocket;
@@ -70,8 +71,6 @@ impl MulticastServiceDiscoveryState {
     ) -> Result<ServiceDiscoveryReactor> {
         let poll: Poll = Poll::new()?;
 
-        //        let interests = get_interests();
-        //        let interests = get_interests();
         let mut server_socket = UdpSocket::bind(config.discovery_addr)?;
         server_socket.set_broadcast(true)?;
 
@@ -141,48 +140,52 @@ impl MulticastServiceDiscoveryState {
     }
 
     fn writable(&mut self, poll: &mut Poll, token: Token) -> Result<()> {
-        if token == ON_DISCOVERY {
-            let reply = ServiceDiscoveryMessage::Response {
-                uid: self.uid,
-                content: self.default_reply.clone(),
-            };
-            let discovery_reply = serde_json::to_vec(&reply)?;
+        match token {
+            ON_DISCOVERY => {
+                let reply = ServiceDiscoveryMessage::Response {
+                    uid: self.uid,
+                    content: self.default_reply.clone(),
+                };
+                let discovery_reply = serde_json::to_vec(&reply)?;
 
-            while let Some(peer_addr) = self.seeker_replies.pop_front() {
+                while let Some(peer_addr) = self.seeker_replies.pop_front() {
+                    let mut sent_bytes = 0;
+                    while sent_bytes != discovery_reply.len() {
+                        if let Ok(bytes_tx) = self
+                            .server_socket
+                            .send_to(&discovery_reply[sent_bytes..], peer_addr)
+                        {
+                            sent_bytes += bytes_tx;
+                        } else {
+                            poll.registry().reregister(
+                                &mut self.server_socket,
+                                ON_DISCOVERY,
+                                Interest::WRITABLE,
+                            )?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            SEEK_NODES => {
                 let mut sent_bytes = 0;
-                while sent_bytes != discovery_reply.len() {
+                while sent_bytes != self.seek_request.len() {
                     if let Ok(bytes_tx) = self
                         .server_socket
-                        .send_to(&discovery_reply[sent_bytes..], peer_addr)
+                        .send_to(&self.seek_request[sent_bytes..], self.config.seeking_addr)
                     {
                         sent_bytes += bytes_tx;
                     } else {
                         poll.registry().reregister(
                             &mut self.server_socket,
-                            ON_DISCOVERY,
+                            SEEK_NODES,
                             Interest::WRITABLE,
                         )?;
                         return Ok(());
                     }
                 }
             }
-        } else if token == SEEK_NODES {
-            let mut sent_bytes = 0;
-            while sent_bytes != self.seek_request.len() {
-                if let Ok(bytes_tx) = self
-                    .server_socket
-                    .send_to(&self.seek_request[sent_bytes..], self.config.seeking_addr)
-                {
-                    sent_bytes += bytes_tx;
-                } else {
-                    poll.registry().reregister(
-                        &mut self.server_socket,
-                        SEEK_NODES,
-                        Interest::WRITABLE,
-                    )?;
-                    return Ok(());
-                }
-            }
+            _ => (),
         }
 
         Ok(poll
@@ -199,7 +202,9 @@ impl MulticastServiceDiscoveryState {
         let mut buf = [0_u8; CONST_PACKET_SIZE];
 
         let mut start = Instant::now();
-        let timeout = Duration::from_millis(state.config.timeout_delta.num_milliseconds() as u64);
+        let timeout = Duration::from_millis(u64::try_from(
+            state.config.timeout_delta.num_milliseconds(),
+        )?);
 
         // Our event loop.
         loop {

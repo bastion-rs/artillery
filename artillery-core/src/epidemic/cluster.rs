@@ -1,10 +1,17 @@
-use super::state::ArtilleryState;
+use super::state::ArtilleryEpidemic;
 use crate::epidemic::cluster_config::ClusterConfig;
 use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
+use bastion_executor::blocking::spawn_blocking;
+use lightproc::proc_stack::ProcStack;
 use std::convert::AsRef;
 use std::net::SocketAddr;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::mpsc::{channel, Receiver, Sender},
+    task::{Context, Poll},
+};
 use uuid::Uuid;
 
 pub struct Cluster {
@@ -17,16 +24,17 @@ impl Cluster {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
-        let (poll, state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
+        let (poll, state) =
+            ArtilleryEpidemic::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
-        std::thread::Builder::new()
-            .name("artillery-epidemic-cluster-state".to_string())
-            .spawn(move || {
-                ArtilleryState::event_loop(&mut internal_rx, poll, state)
+        let _cluster_handle = spawn_blocking(
+            async move {
+                ArtilleryEpidemic::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
-            })
-            .expect("cannot start epidemic cluster state management thread");
+            },
+            ProcStack::default(),
+        );
 
         Ok(Self {
             events: event_rx,
@@ -59,12 +67,10 @@ impl Cluster {
 impl Future for Cluster {
     type Output = ArtilleryClusterEvent;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        loop {
-            return match self.events.recv() {
-                Ok(kv) => Poll::Ready(kv),
-                Err(_) => Poll::Pending
-            }
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
+        match self.events.recv() {
+            Ok(kv) => Poll::Ready(kv),
+            Err(_) => Poll::Pending,
         }
     }
 }

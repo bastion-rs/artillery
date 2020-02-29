@@ -11,48 +11,56 @@ pub type Result<T> = result::Result<T, ArtilleryError>;
 pub enum ArtilleryError {
     // General Error Types
     #[fail(display = "Artillery :: Orphan Node Error: {}", _0)]
-    OrphanNodeError(String),
+    OrphanNode(String),
     #[fail(display = "Artillery :: I/O error occurred: {}", _0)]
-    IoError(io::Error),
+    Io(io::Error),
     #[fail(display = "Artillery :: Cluster Message Decode Error: {}", _0)]
-    ClusterMessageDecodeError(String),
+    ClusterMessageDecode(String),
     #[fail(display = "Artillery :: Message Send Error: {}", _0)]
-    SendError(String),
+    Send(String),
     #[fail(display = "Artillery :: Message Receive Error: {}", _0)]
-    ReceiveError(String),
+    Receive(String),
     #[fail(display = "Artillery :: Unexpected Error: {}", _0)]
-    UnexpectedError(String),
+    Unexpected(String),
     #[fail(display = "Artillery :: Decoding Error: {}", _0)]
-    DecodingError(String),
+    Decoding(String),
+    #[fail(display = "Artillery :: Numeric Cast Error: {}", _0)]
+    NumericCast(String),
 }
 
 impl From<io::Error> for ArtilleryError {
     fn from(e: io::Error) -> Self {
-        ArtilleryError::IoError(e)
+        ArtilleryError::Io(e)
     }
 }
 
 impl From<serde_json::error::Error> for ArtilleryError {
     fn from(e: serde_json::error::Error) -> Self {
-        ArtilleryError::ClusterMessageDecodeError(e.to_string())
+        ArtilleryError::ClusterMessageDecode(e.to_string())
     }
 }
 
 impl<T> From<std::sync::mpsc::SendError<T>> for ArtilleryError {
     fn from(e: SendError<T>) -> Self {
-        ArtilleryError::SendError(e.to_string())
+        ArtilleryError::Send(e.to_string())
     }
 }
 
 impl From<std::sync::mpsc::RecvError> for ArtilleryError {
     fn from(e: RecvError) -> Self {
-        ArtilleryError::ReceiveError(e.to_string())
+        ArtilleryError::Receive(e.to_string())
     }
 }
 
 impl From<std::str::Utf8Error> for ArtilleryError {
     fn from(e: std::str::Utf8Error) -> Self {
-        ArtilleryError::DecodingError(e.to_string())
+        ArtilleryError::Decoding(e.to_string())
+    }
+}
+
+impl From<std::num::TryFromIntError> for ArtilleryError {
+    fn from(e: std::num::TryFromIntError) -> Self {
+        ArtilleryError::NumericCast(e.to_string())
     }
 }
 
