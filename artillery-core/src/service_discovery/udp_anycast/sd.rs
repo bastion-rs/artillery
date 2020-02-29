@@ -7,6 +7,10 @@ use crate::service_discovery::udp_anycast::state::{
 use cuneiform_fields::arch::ArchPadding;
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, Sender};
+use bastion_executor::blocking::spawn_blocking;
+use lightproc::proc_stack::ProcStack;
+
+
 
 pub struct MulticastServiceDiscovery {
     comm: ArchPadding<Sender<ServiceDiscoveryRequest>>,
@@ -21,13 +25,11 @@ impl MulticastServiceDiscovery {
         let (poll, state) = MulticastServiceDiscoveryState::new(config, discovery_reply)?;
 
         debug!("Starting Artillery Multicast SD");
-        std::thread::Builder::new()
-            .name("artillery-mcast-service-discovery-state".to_string())
-            .spawn(move || {
+        let _multicast_sd_handle = spawn_blocking(
+            async move {
                 MulticastServiceDiscoveryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
-            })
-            .expect("cannot start udp_anycast service discovery state thread");
+            }, ProcStack::default());
 
         Ok(Self {
             comm: ArchPadding::new(internal_tx),

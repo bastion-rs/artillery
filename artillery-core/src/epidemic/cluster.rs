@@ -11,6 +11,10 @@ use std::{
     task::{Context, Poll},
 };
 use uuid::Uuid;
+use bastion_executor::blocking::spawn_blocking;
+use lightproc::proc_stack::ProcStack;
+
+
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
@@ -25,13 +29,11 @@ impl Cluster {
         let (poll, state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
-        std::thread::Builder::new()
-            .name("artillery-epidemic-cluster-state".to_string())
-            .spawn(move || {
+        let _cluster_handle = spawn_blocking(
+            async move {
                 ArtilleryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
-            })
-            .expect("cannot start epidemic cluster state management thread");
+            }, ProcStack::default());
 
         Ok(Self {
             events: event_rx,
