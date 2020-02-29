@@ -4,7 +4,7 @@ use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
 use std::convert::AsRef;
 use std::net::SocketAddr;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{task::{Context, Poll}, sync::mpsc::{channel, Receiver, Sender}, pin::Pin, future::Future};
 use uuid::Uuid;
 
 pub struct Cluster {
