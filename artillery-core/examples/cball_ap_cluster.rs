@@ -10,7 +10,7 @@ use uuid::Uuid;
 use artillery_core::epidemic::prelude::*;
 use artillery_core::service_discovery::mdns::prelude::*;
 
-use artillery_core::cluster::ap_cluster::*;
+use artillery_core::cluster::ap::*;
 use futures::future;
 
 use bastion_executor::prelude::*;
