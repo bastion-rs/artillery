@@ -8,7 +8,8 @@ use libp2p::multiaddr::Protocol;
 use libp2p::{identity, Multiaddr, PeerId};
 use lightproc::proc_stack::ProcStack;
 
-use std::sync::mpsc::{channel, Receiver};
+
+use crossbeam_channel::{unbounded, Sender, Receiver};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -24,7 +25,7 @@ unsafe impl Sync for MDNSServiceDiscovery {}
 
 impl MDNSServiceDiscovery {
     pub fn new_service_discovery(config: MDNSServiceDiscoveryConfig) -> Result<Self> {
-        let (event_tx, event_rx) = channel::<MDNSServiceDiscoveryEvent>();
+        let (event_tx, event_rx) = unbounded::<MDNSServiceDiscoveryEvent>();
 
         let peer_id = PeerId::from(identity::Keypair::generate_ed25519().public());
 
