@@ -4,13 +4,11 @@ use crate::service_discovery::udp_anycast::state::MulticastServiceDiscoveryState
 use crate::service_discovery::udp_anycast::state::{
     ServiceDiscoveryReply, ServiceDiscoveryRequest,
 };
+use bastion_executor::blocking::spawn_blocking;
 use cuneiform_fields::arch::ArchPadding;
+use lightproc::proc_stack::ProcStack;
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, Sender};
-use bastion_executor::blocking::spawn_blocking;
-use lightproc::proc_stack::ProcStack;
-
-
 
 pub struct MulticastServiceDiscovery {
     comm: ArchPadding<Sender<ServiceDiscoveryRequest>>,
@@ -29,7 +27,9 @@ impl MulticastServiceDiscovery {
             async move {
                 MulticastServiceDiscoveryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
-            }, ProcStack::default());
+            },
+            ProcStack::default(),
+        );
 
         Ok(Self {
             comm: ArchPadding::new(internal_tx),

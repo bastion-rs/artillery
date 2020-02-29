@@ -2,6 +2,8 @@ use super::state::ArtilleryState;
 use crate::epidemic::cluster_config::ClusterConfig;
 use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
+use bastion_executor::blocking::spawn_blocking;
+use lightproc::proc_stack::ProcStack;
 use std::convert::AsRef;
 use std::net::SocketAddr;
 use std::{
@@ -11,10 +13,6 @@ use std::{
     task::{Context, Poll},
 };
 use uuid::Uuid;
-use bastion_executor::blocking::spawn_blocking;
-use lightproc::proc_stack::ProcStack;
-
-
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
@@ -33,7 +31,9 @@ impl Cluster {
             async move {
                 ArtilleryState::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
-            }, ProcStack::default());
+            },
+            ProcStack::default(),
+        );
 
         Ok(Self {
             events: event_rx,
