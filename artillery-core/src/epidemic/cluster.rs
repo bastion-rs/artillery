@@ -4,7 +4,12 @@ use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
 use std::convert::AsRef;
 use std::net::SocketAddr;
-use std::{task::{Context, Poll}, sync::mpsc::{channel, Receiver, Sender}, pin::Pin, future::Future};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::mpsc::{channel, Receiver, Sender},
+    task::{Context, Poll},
+};
 use uuid::Uuid;
 
 pub struct Cluster {
@@ -59,12 +64,10 @@ impl Cluster {
 impl Future for Cluster {
     type Output = ArtilleryClusterEvent;
 
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        loop {
-            return match self.events.recv() {
-                Ok(kv) => Poll::Ready(kv),
-                Err(_) => Poll::Pending
-            }
+    fn poll(self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Self::Output> {
+        match self.events.recv() {
+            Ok(kv) => Poll::Ready(kv),
+            Err(_) => Poll::Pending,
         }
     }
 }
