@@ -1,6 +1,4 @@
 #![deny(
-    // clippy::missing_const_for_fn,
-    // clippy::missing_docs_in_private_items,
     clippy::unimplemented,
     clippy::wildcard_enum_match_arm,
     clippy::else_if_without_else,
@@ -56,7 +54,11 @@
     clippy::unseparated_literal_suffix,
     clippy::used_underscore_binding,
     clippy::wildcard_dependencies,
-    clippy::wrong_pub_self_convention
+    clippy::wrong_pub_self_convention,
+
+    // TODO: Write docs and constantization. Nice word, constantization. I found it. Thanks.
+    // clippy::missing_const_for_fn,
+    // clippy::missing_docs_in_private_items,
 )]
 
 #[macro_use]
