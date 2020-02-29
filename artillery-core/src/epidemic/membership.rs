@@ -79,7 +79,7 @@ impl ArtilleryMemberList {
 
     pub fn time_out_nodes(
         &mut self,
-        expired_hosts: HashSet<SocketAddr>,
+        expired_hosts: &HashSet<SocketAddr>,
     ) -> (Vec<ArtilleryMember>, Vec<ArtilleryMember>) {
         let mut suspect_members = Vec::new();
         let mut down_members = Vec::new();
@@ -90,14 +90,17 @@ impl ArtilleryMemberList {
                     continue;
                 }
 
-                if member.state() == ArtilleryMemberState::Alive {
-                    member.set_state(ArtilleryMemberState::Suspect);
-                    suspect_members.push(member.clone());
-                } else if member.state() == ArtilleryMemberState::Suspect
-                    && member.state_change_older_than(Duration::seconds(3))
-                {
-                    member.set_state(ArtilleryMemberState::Down);
-                    down_members.push(member.clone());
+                match member.state() {
+                    ArtilleryMemberState::Alive => {
+                        member.set_state(ArtilleryMemberState::Suspect);
+                        suspect_members.push(member.clone());
+                    },
+                    // TODO: Config suspect timeout
+                    ArtilleryMemberState::Suspect if member.state_change_older_than(Duration::seconds(3)) => {
+                        member.set_state(ArtilleryMemberState::Down);
+                        down_members.push(member.clone());
+                    },
+                    _ => {}
                 }
             }
         }

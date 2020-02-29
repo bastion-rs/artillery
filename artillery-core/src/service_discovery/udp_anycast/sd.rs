@@ -53,7 +53,7 @@ impl MulticastServiceDiscovery {
             .send(ServiceDiscoveryRequest::SetBroadcastListen(listen))?)
     }
 
-    /// Explore the network to find nodes using udp_anycast SD.
+    /// Explore the network to find nodes using `udp_anycast` SD.
     pub fn seek_peers(&self) -> Result<()> {
         Ok(self.comm.send(ServiceDiscoveryRequest::SeekPeers)?)
     }

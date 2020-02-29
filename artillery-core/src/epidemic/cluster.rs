@@ -1,4 +1,4 @@
-use super::state::ArtilleryState;
+use super::state::ArtilleryEpidemic;
 use crate::epidemic::cluster_config::ClusterConfig;
 use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
@@ -24,12 +24,12 @@ impl Cluster {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
-        let (poll, state) = ArtilleryState::new(host_key, config, event_tx, internal_tx.clone())?;
+        let (poll, state) = ArtilleryEpidemic::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
         let _cluster_handle = spawn_blocking(
             async move {
-                ArtilleryState::event_loop(&mut internal_rx, poll, state)
+                ArtilleryEpidemic::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
             },
             ProcStack::default(),

@@ -1,13 +1,11 @@
 #![deny(
-    clippy::missing_const_for_fn,
-    clippy::missing_docs_in_private_items,
-    clippy::module_name_repetitions,
-    clippy::multiple_crate_versions,
+    // clippy::missing_const_for_fn,
+    // clippy::missing_docs_in_private_items,
     clippy::unimplemented,
     clippy::wildcard_enum_match_arm,
     clippy::else_if_without_else,
     clippy::float_arithmetic,
-    clippy::indexing_slicing,
+    // clippy::indexing_slicing, // XXX: Enable for failpoint discovery
     clippy::cast_lossless,
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,
