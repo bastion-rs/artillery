@@ -66,7 +66,7 @@ fn main() {
             let events_handle = spawn_blocking(
                 async move {
                     warn!("STARTED: Event Poller");
-                    for (members, event) in ap_events.cluster().clone().events.iter() {
+                    for (members, event) in ap_events.cluster().events.iter() {
                         warn!("");
                         warn!(" CLUSTER EVENT ");
                         warn!("===============");

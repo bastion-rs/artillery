@@ -129,7 +129,7 @@ fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
     static CLUSTER: OnceCell<Cluster> = OnceCell::new();
     CLUSTER.get_or_init(|| {
         let config = ClusterConfig {
-            cluster_key: "artillery_local".as_bytes().to_vec(),
+            cluster_key: b"artillery_local".to_vec(),
             listen_addr: (&listen_addr as &str)
                 .to_socket_addrs()
                 .unwrap()
