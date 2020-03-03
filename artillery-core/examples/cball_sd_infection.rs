@@ -65,7 +65,7 @@ fn main() {
 
     let service_discovery = {
         let sd_port = get_port();
-        if let Some(_) = seeker {
+        if seeker.is_some() {
             MulticastServiceDiscoveryConfig {
                 timeout_delta: Duration::seconds(1),
                 discovery_addr: SocketAddr::from(([0, 0, 0, 0], sd_port)),
@@ -97,7 +97,7 @@ fn main() {
 
     let (tx, discoveries) = channel();
     sd.register_seeker(tx).unwrap();
-    if let Some(_) = seeker {
+    if seeker.is_some() {
         sd.seek_peers().unwrap();
     } else {
         sd.set_listen_for_peers(true).unwrap();
@@ -168,7 +168,7 @@ fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
     static CLUSTER: OnceCell<Cluster> = OnceCell::new();
     CLUSTER.get_or_init(|| {
         let config = ClusterConfig {
-            cluster_key: "artillery_local".as_bytes().to_vec(),
+            cluster_key: b"artillery_local".to_vec(),
             listen_addr: (&listen_addr as &str)
                 .to_socket_addrs()
                 .unwrap()

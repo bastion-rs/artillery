@@ -1,9 +1,14 @@
 name: CI
 
-on: [push, pull_request]
-
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 jobs:
-  build_and_test:
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -40,41 +45,8 @@ jobs:
           toolchain: ${{ matrix.version }}-${{ matrix.toolchain }}
           default: true
 
-      - name: check nightly
-        if: matrix.version == 'nightly'
+      - name: build
         uses: actions-rs/cargo@v1
         with:
-          command: check
-          args: --all --benches --bins --examples --tests
-
-      - name: check stable
-        if: matrix.version == 'stable'
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all --bins --examples --tests
-
-      - name: tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all
-
-  check_fmt_and_docs:
-    name: Checking fmt and docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-
-      - name: Setup
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          default: true
-          components: rustfmt
-
-      - name: fmt
-        run: cargo fmt --all -- --check
-
-      - name: doc
-        run: cargo doc
+          command: build
+          args: --all-targets --all-features --verbose
