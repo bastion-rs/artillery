@@ -3,10 +3,9 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
-
-use std::sync::Once;
 use bastion::prelude::*;
 use fail::FailScenario;
+use std::sync::Once;
 
 //
 
@@ -27,9 +26,14 @@ use lightproc::proc_stack::ProcStack;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-
-fn test_epidemic_periodic_index_fp(port: u16) ->
-    (Arc<ArtilleryAPCluster>, RecoverableHandle<()>, RecoverableHandle<()>, RecoverableHandle<()>) {
+fn test_epidemic_periodic_index_fp(
+    port: u16,
+) -> (
+    Arc<ArtilleryAPCluster>,
+    RecoverableHandle<()>,
+    RecoverableHandle<()>,
+    RecoverableHandle<()>,
+) {
     // Initialize our cluster configuration
     let ap_cluster_config = ArtilleryAPClusterConfig {
         app_name: String::from("artillery-ap"),
@@ -65,10 +69,9 @@ fn test_epidemic_periodic_index_fp(port: u16) ->
     let ap_ref = ap_cluster.clone();
 
     // Detach cluster launch
-    let cluster_handle = spawn_blocking(
-        async move { ap_cluster.launch().await }, cluster_stack);
+    let cluster_handle = spawn_blocking(async move { ap_cluster.launch().await }, cluster_stack);
 
-        // Detach event consumption
+    // Detach event consumption
     let events_handle = spawn_blocking(
         async move {
             warn!("STARTED: Event Poller");
@@ -84,7 +87,9 @@ fn test_epidemic_periodic_index_fp(port: u16) ->
                 }
             }
             warn!("STOPPED: Event Poller");
-        }, events_stack);
+        },
+        events_stack,
+    );
 
     (ap_ref, events_handle, cluster_handle, cluster_listener)
 }
@@ -104,49 +109,56 @@ fn get_port() -> u16 {
 static LOGGER_INIT: Once = Once::new();
 
 macro_rules! cluster_fault_recovery_test {
-	  ($fp_name:expr) => {
+    ($fp_name:expr) => {
         LOGGER_INIT.call_once(|| pretty_env_logger::init());
         let scenario = FailScenario::setup();
         fail::cfg($fp_name, "panic").unwrap();
 
-
         // Let's see how reliable you are.
-        let node1 = spawn_blocking(async {
-            let (c, events, cluster_handle, cluster_listener) = test_epidemic_periodic_index_fp(get_port());
-            match cluster_listener.await {
-                Some(_) => assert!(false),
-                _ => {
-                    // Test passed.
-                    warn!("This node is leaving.");
-                    c.shutdown();
-                    warn!("Stopping the setup");
-                },
-            }
-        }, ProcStack::default());
+        let node1 = spawn_blocking(
+            async {
+                let (c, events, cluster_handle, cluster_listener) =
+                    test_epidemic_periodic_index_fp(get_port());
+                match cluster_listener.await {
+                    Some(_) => assert!(false),
+                    _ => {
+                        // Test passed.
+                        warn!("This node is leaving.");
+                        c.shutdown();
+                        warn!("Stopping the setup");
+                    }
+                }
+            },
+            ProcStack::default(),
+        );
 
-        let node2 = spawn_blocking(async {
-            let (c, events, cluster_handle, cluster_listener) = test_epidemic_periodic_index_fp(get_port());
-            match cluster_listener.await {
-                Some(_) => assert!(false),
-                _ => {
-                    // Test passed.
-                    warn!("This node is leaving.");
-                    c.shutdown();
-                    warn!("Stopping the setup");
-                },
-            }
-        }, ProcStack::default());
+        let node2 = spawn_blocking(
+            async {
+                let (c, events, cluster_handle, cluster_listener) =
+                    test_epidemic_periodic_index_fp(get_port());
+                match cluster_listener.await {
+                    Some(_) => assert!(false),
+                    _ => {
+                        // Test passed.
+                        warn!("This node is leaving.");
+                        c.shutdown();
+                        warn!("Stopping the setup");
+                    }
+                }
+            },
+            ProcStack::default(),
+        );
 
-
-        run(async { future::join(node1, node2).await }, ProcStack::default());
+        run(
+            async { future::join(node1, node2).await },
+            ProcStack::default(),
+        );
 
         scenario.teardown();
-    }
+    };
 }
-
 
 #[test]
 fn epidemic_periodic_index_fp() {
     cluster_fault_recovery_test!("epidemic-periodic-index-fp");
 }
-

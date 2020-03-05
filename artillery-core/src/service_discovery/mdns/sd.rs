@@ -9,11 +9,11 @@ use libp2p::{identity, Multiaddr, PeerId};
 use lightproc::proc_stack::ProcStack;
 
 use crossbeam_channel::{unbounded, Receiver};
+use fail::fail_point;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use fail::fail_point;
 
 pub struct MDNSServiceDiscovery {
     events: Arc<Receiver<MDNSServiceDiscoveryEvent>>,

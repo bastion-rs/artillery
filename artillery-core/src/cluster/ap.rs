@@ -4,11 +4,8 @@ use crate::service_discovery::mdns::prelude::*;
 
 use lightproc::prelude::*;
 
-use std::future::Future;
-
 use std::sync::Arc;
 use uuid::Uuid;
-use futures::{join, future};
 
 #[derive(Default, Clone)]
 pub struct ArtilleryAPClusterConfig {
@@ -21,7 +18,7 @@ pub struct ArtilleryAPClusterConfig {
 pub struct ArtilleryAPCluster {
     config: ArtilleryAPClusterConfig,
     cluster: Arc<Cluster>,
-    sd: Arc<MDNSServiceDiscovery>
+    sd: Arc<MDNSServiceDiscovery>,
 }
 
 unsafe impl Send for ArtilleryAPCluster {}
@@ -33,13 +30,17 @@ impl ArtilleryAPCluster {
     pub fn new(config: ArtilleryAPClusterConfig) -> Result<(Self, RecoverableHandle<()>)> {
         let sd = MDNSServiceDiscovery::new_service_discovery(config.sd_config.clone())?;
 
-        let (cluster, cluster_listener) = Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
+        let (cluster, cluster_listener) =
+            Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
 
-        Ok((Self {
-            config,
-            cluster: Arc::new(cluster),
-            sd: Arc::new(sd)
-        }, cluster_listener))
+        Ok((
+            Self {
+                config,
+                cluster: Arc::new(cluster),
+                sd: Arc::new(sd),
+            },
+            cluster_listener,
+        ))
     }
 
     pub fn cluster(&self) -> Arc<Cluster> {
@@ -55,8 +56,7 @@ impl ArtilleryAPCluster {
     }
 
     pub async fn launch(&self) {
-        self
-            .service_discovery()
+        self.service_discovery()
             .events()
             .iter()
             .filter(|discovery| {

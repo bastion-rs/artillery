@@ -10,7 +10,6 @@ use crate::epidemic::member;
 use bastion_utils::math;
 use fail::fail_point;
 
-
 pub struct ArtilleryMemberList {
     members: Vec<ArtilleryMember>,
     periodic_index: usize,

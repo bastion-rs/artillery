@@ -3,24 +3,27 @@ use crate::epidemic::cluster_config::ClusterConfig;
 use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
 use bastion_executor::prelude::*;
-use lightproc::{recoverable_handle::RecoverableHandle, proc_stack::ProcStack};
+use lightproc::{proc_stack::ProcStack, recoverable_handle::RecoverableHandle};
 use std::convert::AsRef;
 use std::net::SocketAddr;
 use std::{
     future::Future,
     pin::Pin,
-    sync::{Arc, mpsc::{channel, Receiver, Sender}},
+    sync::mpsc::{channel, Receiver, Sender},
     task::{Context, Poll},
 };
 use uuid::Uuid;
 
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
-    comm: Sender<ArtilleryClusterRequest>
+    comm: Sender<ArtilleryClusterRequest>,
 }
 
 impl Cluster {
-    pub fn new_cluster(host_key: Uuid, config: ClusterConfig) -> Result<(Self, RecoverableHandle<()>)> {
+    pub fn new_cluster(
+        host_key: Uuid,
+        config: ClusterConfig,
+    ) -> Result<(Self, RecoverableHandle<()>)> {
         let (event_tx, event_rx) = channel::<ArtilleryClusterEvent>();
         let (internal_tx, mut internal_rx) = channel::<ArtilleryClusterRequest>();
 
@@ -36,15 +39,17 @@ impl Cluster {
             ProcStack::default(),
         );
 
-        Ok((Self {
-            events: event_rx,
-            comm: internal_tx
-        }, cluster_handle))
+        Ok((
+            Self {
+                events: event_rx,
+                comm: internal_tx,
+            },
+            cluster_handle,
+        ))
     }
 
     pub fn add_seed_node(&self, addr: SocketAddr) {
-        let _ = self.comm
-            .send(ArtilleryClusterRequest::AddSeed(addr));
+        let _ = self.comm.send(ArtilleryClusterRequest::AddSeed(addr));
     }
 
     pub fn send_payload<T: AsRef<str>>(&self, id: Uuid, msg: T) {
