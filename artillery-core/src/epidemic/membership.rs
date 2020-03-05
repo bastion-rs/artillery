@@ -8,6 +8,8 @@ use uuid::Uuid;
 use super::member::{ArtilleryMember, ArtilleryMemberState, ArtilleryStateChange};
 use crate::epidemic::member;
 use bastion_utils::math;
+use fail::fail_point;
+
 
 pub struct ArtilleryMemberList {
     members: Vec<ArtilleryMember>,
@@ -72,6 +74,7 @@ impl ArtilleryMemberList {
         if other_members.is_empty() {
             None
         } else {
+            fail_point!("epidemic-periodic-index-fp");
             self.periodic_index = (self.periodic_index + 1) % other_members.len();
             Some(other_members[self.periodic_index].clone())
         }

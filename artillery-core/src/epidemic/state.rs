@@ -20,6 +20,8 @@ use failure::_core::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
+use fail::fail_point;
+
 use crate::constants::*;
 
 pub type ArtilleryClusterEvent = (Vec<ArtilleryMember>, ArtilleryMemberEvent);
@@ -493,6 +495,7 @@ fn build_message(
     };
 
     for i in 0..=state_changes.len() {
+        fail_point!("epidemic-state-change-tail-follow-fp");
         message = ArtilleryMessage {
             sender: *sender,
             cluster_key: cluster_key.into(),

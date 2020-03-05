@@ -8,6 +8,7 @@ use std::future::Future;
 
 use std::sync::Arc;
 use uuid::Uuid;
+use futures::{join, future};
 
 #[derive(Default, Clone)]
 pub struct ArtilleryAPClusterConfig {
@@ -20,7 +21,7 @@ pub struct ArtilleryAPClusterConfig {
 pub struct ArtilleryAPCluster {
     config: ArtilleryAPClusterConfig,
     cluster: Arc<Cluster>,
-    sd: Arc<MDNSServiceDiscovery>,
+    sd: Arc<MDNSServiceDiscovery>
 }
 
 unsafe impl Send for ArtilleryAPCluster {}
@@ -29,16 +30,16 @@ unsafe impl Sync for ArtilleryAPCluster {}
 pub type DiscoveryLaunch = RecoverableHandle<()>;
 
 impl ArtilleryAPCluster {
-    pub fn new(config: ArtilleryAPClusterConfig) -> Result<Self> {
+    pub fn new(config: ArtilleryAPClusterConfig) -> Result<(Self, RecoverableHandle<()>)> {
         let sd = MDNSServiceDiscovery::new_service_discovery(config.sd_config.clone())?;
 
-        let cluster = Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
+        let (cluster, cluster_listener) = Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
 
-        Ok(Self {
+        Ok((Self {
             config,
             cluster: Arc::new(cluster),
-            sd: Arc::new(sd),
-        })
+            sd: Arc::new(sd)
+        }, cluster_listener))
     }
 
     pub fn cluster(&self) -> Arc<Cluster> {
@@ -49,22 +50,18 @@ impl ArtilleryAPCluster {
         self.sd.clone()
     }
 
-    pub fn launch(&self) -> impl Future<Output = ()> + '_ {
-        let config = self.config.clone();
-        let events = self.service_discovery().events();
-        let cluster = self.cluster.clone();
+    pub fn shutdown(&self) {
+        self.cluster().leave_cluster();
+    }
 
-        async {
-            let config_inner = config;
-            let events_inner = events;
-            let cluster_inner = cluster;
-
-            events_inner
-                .iter()
-                .filter(|discovery| {
-                    discovery.get().port() != config_inner.sd_config.local_service_addr.port()
-                })
-                .for_each(|discovery| cluster_inner.add_seed_node(discovery.get()))
-        }
+    pub async fn launch(&self) {
+        self
+            .service_discovery()
+            .events()
+            .iter()
+            .filter(|discovery| {
+                discovery.get().port() != self.config.sd_config.local_service_addr.port()
+            })
+            .for_each(|discovery| self.cluster.add_seed_node(discovery.get()))
     }
 }

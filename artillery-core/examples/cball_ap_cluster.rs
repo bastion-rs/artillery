@@ -48,7 +48,8 @@ fn main() {
     };
 
     // Configure our cluster node
-    let ap_cluster = Arc::new(ArtilleryAPCluster::new(ap_cluster_config).unwrap());
+    let (cluster, cluster_listener) = ArtilleryAPCluster::new(ap_cluster_config).unwrap();
+    let ap_cluster = Arc::new(cluster);
 
     // Launch the cluster node
     run(
@@ -60,7 +61,7 @@ fn main() {
 
             // Detach cluster launch
             let cluster_handle =
-                spawn_blocking(async move { ap_cluster.launch().await }, cluster_stack);
+                spawn(async move { ap_cluster.launch().await }, cluster_stack);
 
             // Detach event consumption
             let events_handle = spawn_blocking(

@@ -13,6 +13,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use fail::fail_point;
 
 pub struct MDNSServiceDiscovery {
     events: Arc<Receiver<MDNSServiceDiscoveryEvent>>,
@@ -62,6 +63,7 @@ impl MDNSServiceDiscovery {
                                 for addr in peer.addresses() {
                                     debug!(" Address = {:?}", addr);
                                     let components = addr.iter().collect::<Vec<_>>();
+                                    fail_point!("mdns-protocol-fp");
                                     if let Protocol::Ip4(discovered_ip) = components[0] {
                                         if let Protocol::Udp(discovered_port) = components[1] {
                                             let discovered =
