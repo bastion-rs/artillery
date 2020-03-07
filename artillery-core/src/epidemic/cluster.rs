@@ -31,7 +31,7 @@ impl Cluster {
             ArtilleryEpidemic::new(host_key, config, event_tx, internal_tx.clone())?;
 
         debug!("Starting Artillery Cluster");
-        let cluster_handle = spawn(
+        let cluster_handle = spawn_blocking(
             async move {
                 ArtilleryEpidemic::event_loop(&mut internal_rx, poll, state)
                     .expect("Failed to create event loop");
@@ -62,9 +62,8 @@ impl Cluster {
     }
 
     pub fn leave_cluster(&self) {
-        self.comm
-            .send(ArtilleryClusterRequest::LeaveCluster)
-            .unwrap();
+        let _ = self.comm
+            .send(ArtilleryClusterRequest::LeaveCluster);
     }
 }
 

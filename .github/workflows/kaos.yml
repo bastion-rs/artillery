@@ -45,6 +45,6 @@ jobs:
           toolchain: ${{ matrix.version }}-${{ matrix.toolchain }}
           default: true
 
-      - name: Failpoint Test (Core)
-        run: cargo test --features fail/failpoints --verbose
+      - name: Chaos Tests (Core)
+        run: cargo test --verbose
         working-directory: ./artillery-core
