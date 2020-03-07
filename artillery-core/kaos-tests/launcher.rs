@@ -1,5 +1,5 @@
 #[test]
-fn kaos() {
+fn chaos_tests() {
     use std::fs;
     use std::time::Duration;
 
@@ -26,7 +26,7 @@ fn kaos() {
                 .into_os_string()
                 .into_string()
                 .unwrap()
-                .contains("chaos")
+                .contains("base")
         {
             // Every service run should be available at least 2 seconds
             k.available(path, Duration::from_secs(2));

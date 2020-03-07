@@ -1,11 +1,10 @@
 #[macro_export]
 macro_rules! cluster_init {
 	  () => {
-        use bastion::prelude::*;
-        use fail::FailScenario;
         use std::sync::Once;
 
         //
+        use kaos::*;
 
         use std::net::ToSocketAddrs;
 
@@ -131,27 +130,26 @@ macro_rules! node_spawn {
     }
 }
 
-#[macro_export]
-macro_rules! chaos_unleash {
-    ($fp_name:expr) => {
-        LOGGER_INIT.call_once(|| pretty_env_logger::init());
-        let scenario = FailScenario::setup();
-        fail::cfg($fp_name, "panic").unwrap();
+// #[macro_export]
+// macro_rules! chaos_unleash {
+//     ($fp_name:expr) => {
+//         LOGGER_INIT.call_once(|| pretty_env_logger::init());
+//         let scenario = FailScenario::setup();
 
-        // Let's see how reliable you are.
-        node_spawn!(node1);
-        node_spawn!(node2);
-        node_spawn!(node3);
+//         // Let's see how reliable you are.
+//         node_spawn!(node1);
+//         node_spawn!(node2);
+//         node_spawn!(node3);
 
-        run(
-            async {
-                future::join_all(
-                    vec![node1, node2, node3]
-                ).await
-            },
-            ProcStack::default(),
-        );
+//         run(
+//             async {
+//                 future::join_all(
+//                     vec![node1, node2, node3]
+//                 ).await
+//             },
+//             ProcStack::default(),
+//         );
 
-        scenario.teardown();
-    };
-}
+//         scenario.teardown();
+//     };
+// }

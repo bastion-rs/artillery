@@ -5,3 +5,7 @@ members = [
     "artillery-core",
     "artillery-hierman",
 ]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1

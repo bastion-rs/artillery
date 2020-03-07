@@ -15,7 +15,7 @@ use std::net::SocketAddr;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::{Duration, Instant};
 
-use fail::fail_point;
+use kaos::flunk;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 /// Default acknowledgement reply for the Discovery.
@@ -153,7 +153,7 @@ impl MulticastServiceDiscoveryState {
                 while let Some(peer_addr) = self.seeker_replies.pop_front() {
                     let mut sent_bytes = 0;
                     while sent_bytes != discovery_reply.len() {
-                        fail_point!("udpanycast-reply-dgram-oob-fp");
+                        flunk!("udp-anycast-reply-dgram-oob-fp");
                         if let Ok(bytes_tx) = self
                             .server_socket
                             .send_to(&discovery_reply[sent_bytes..], peer_addr)
@@ -173,7 +173,7 @@ impl MulticastServiceDiscoveryState {
             SEEK_NODES => {
                 let mut sent_bytes = 0;
                 while sent_bytes != self.seek_request.len() {
-                    fail_point!("udp-anycast-dgram-oob-fp");
+                    flunk!("udp-anycast-dgram-oob-fp");
                     if let Ok(bytes_tx) = self
                         .server_socket
                         .send_to(&self.seek_request[sent_bytes..], self.config.seeking_addr)
