@@ -59,7 +59,8 @@ fn main() {
             let ap_events = ap_cluster.clone();
 
             // Detach cluster launch
-            let cluster_handle = spawn_blocking(async move { ap_cluster.launch().await }, cluster_stack);
+            let cluster_handle =
+                spawn_blocking(async move { ap_cluster.launch().await }, cluster_stack);
 
             // Detach event consumption
             let events_handle = spawn_blocking(

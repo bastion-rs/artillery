@@ -4,11 +4,10 @@ use crate::service_discovery::mdns::prelude::*;
 
 use lightproc::prelude::*;
 
+use futures::{select, FutureExt};
+use pin_utils::pin_mut;
 use std::{cell::Cell, sync::Arc};
 use uuid::Uuid;
-use futures::{FutureExt, select};
-use pin_utils::pin_mut;
-
 
 #[derive(Default, Clone)]
 pub struct ArtilleryAPClusterConfig {
@@ -37,14 +36,12 @@ impl ArtilleryAPCluster {
         let (cluster, cluster_listener) =
             Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
 
-        Ok(
-            Self {
-                config,
-                cluster: Arc::new(cluster),
-                sd: Arc::new(sd),
-                cluster_ev_loop_handle: Cell::new(cluster_listener)
-            }
-        )
+        Ok(Self {
+            config,
+            cluster: Arc::new(cluster),
+            sd: Arc::new(sd),
+            cluster_ev_loop_handle: Cell::new(cluster_listener),
+        })
     }
 
     pub fn cluster(&self) -> Arc<Cluster> {
@@ -60,7 +57,7 @@ impl ArtilleryAPCluster {
     }
 
     pub async fn launch(&self) {
-        let (_, eh) = LightProc::recoverable(async {}, |_|(), ProcStack::default());
+        let (_, eh) = LightProc::recoverable(async {}, |_| (), ProcStack::default());
         let ev_loop_handle = self.cluster_ev_loop_handle.replace(eh);
 
         // do fusing

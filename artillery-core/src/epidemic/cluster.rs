@@ -62,8 +62,7 @@ impl Cluster {
     }
 
     pub fn leave_cluster(&self) {
-        let _ = self.comm
-            .send(ArtilleryClusterRequest::LeaveCluster);
+        let _ = self.comm.send(ArtilleryClusterRequest::LeaveCluster);
     }
 }
 

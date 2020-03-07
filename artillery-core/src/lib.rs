@@ -30,7 +30,7 @@
     clippy::maybe_infinite_iter,
     clippy::mem_forget,
     clippy::multiple_inherent_impl,
-    clippy::mut_mut,
+    // clippy::mut_mut, // TODO: because select macro does this. Not us. Sigh.
     clippy::needless_borrow,
     clippy::needless_continue,
     clippy::needless_pass_by_value,

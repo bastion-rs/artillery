@@ -15,20 +15,18 @@ fn kaos() {
             .into_string()
             .unwrap()
             .contains("launcher")
-            &&
-            !path
-            .clone()
-            .into_os_string()
-            .into_string()
-            .unwrap()
-            .contains("mod")
-            &&
-            !path
-            .clone()
-            .into_os_string()
-            .into_string()
-            .unwrap()
-            .contains("chaos")
+            && !path
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .contains("mod")
+            && !path
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .contains("chaos")
         {
             // Every service run should be available at least 2 seconds
             k.available(path, Duration::from_secs(2));
