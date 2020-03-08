@@ -26,14 +26,16 @@ fn chaos_tests() {
                 .into_os_string()
                 .into_string()
                 .unwrap()
-                .contains("base") // Filter out common code as test
+                .contains("base")
+        // Filter out common code as test
         {
             if path
                 .clone()
                 .into_os_string()
                 .into_string()
                 .unwrap()
-                .contains("chaotic") // Chaotic test rather than availability
+                .contains("chaotic")
+            // Chaotic test rather than availability
             {
                 // Let's have 5 varying runs.
                 let run_count = 5;
