@@ -24,7 +24,7 @@ libp2p = "0.16.0"
 bastion-executor = "0.3.4"
 lightproc = "0.3.4"
 crossbeam-channel = "0.4.2"
-kaos = { path = "../../kaos" }
+kaos = "0.1.1-alpha.1"
 
 [dev-dependencies]
 bincode = "1.2.1"
@@ -32,7 +32,7 @@ clap = "2.33.0"
 pretty_env_logger = "0.4.0"
 once_cell = "1.3.1"
 criterion = "0.3.1"
-# kaos = { path = "../../kaos" }
+
 
 [[test]]
 name = "chaos_tests"
