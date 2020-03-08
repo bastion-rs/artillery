@@ -6,15 +6,14 @@ extern crate log;
 mod base;
 use base::*;
 
-
 fn main() {
     cluster_init!();
 
-    kaostest!("epidemic-periodic-index-fp",
+    kaostest!("mdns-protocol-fp",
               {
-                  ap_events_check_node_spawn!(node1);
-                  ap_events_check_node_spawn!(node2);
-                  ap_events_check_node_spawn!(node3);
+                  ap_sd_check_node_spawn!(node1);
+                  ap_sd_check_node_spawn!(node2);
+                  ap_sd_check_node_spawn!(node3);
 
                   run(
                       async {

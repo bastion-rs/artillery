@@ -11,9 +11,9 @@ fn main() {
 
     kaostest!("epidemic-state-change-tail-follow-fp",
               {
-                  node_spawn!(node1);
-                  node_spawn!(node2);
-                  node_spawn!(node3);
+                  ap_events_check_node_spawn!(node1);
+                  ap_events_check_node_spawn!(node2);
+                  ap_events_check_node_spawn!(node3);
 
                   run(
                       async {

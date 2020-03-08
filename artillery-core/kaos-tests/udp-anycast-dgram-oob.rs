@@ -8,7 +8,7 @@ use base::*;
 
 fn main() {
     // cluster_init!();
-    // chaos_unleash!("udp-anycast-reply-dgram-oop-fp");
+    // "udp-anycast-dgram-oop-fp"
 
     // TODO: This will obviously pass because AP cluster doesn't use UDP anycast by default.
     // Fix it after having different prepared cluster.

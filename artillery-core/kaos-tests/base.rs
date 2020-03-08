@@ -103,12 +103,12 @@ macro_rules! cluster_init {
         }
 
         static LOGGER_INIT: Once = Once::new();
-
+        LOGGER_INIT.call_once(|| pretty_env_logger::init());
 	  };
 }
 
 #[macro_export]
-macro_rules! node_spawn {
+macro_rules! ap_events_check_node_spawn {
     ($node_handle:ident) => {
         let $node_handle = spawn_blocking(
             async {
@@ -130,26 +130,25 @@ macro_rules! node_spawn {
     }
 }
 
-// #[macro_export]
-// macro_rules! chaos_unleash {
-//     ($fp_name:expr) => {
-//         LOGGER_INIT.call_once(|| pretty_env_logger::init());
-//         let scenario = FailScenario::setup();
-
-//         // Let's see how reliable you are.
-//         node_spawn!(node1);
-//         node_spawn!(node2);
-//         node_spawn!(node3);
-
-//         run(
-//             async {
-//                 future::join_all(
-//                     vec![node1, node2, node3]
-//                 ).await
-//             },
-//             ProcStack::default(),
-//         );
-
-//         scenario.teardown();
-//     };
-// }
+#[macro_export]
+macro_rules! ap_sd_check_node_spawn {
+    ($node_handle:ident) => {
+        let $node_handle = spawn_blocking(
+            async {
+                let (c, events, cluster_handle) = node_setup(get_port());
+                match cluster_handle.await {
+                    Some(a) => {
+                        // Test passed.
+                        warn!("This node is leaving.");
+                        c.shutdown();
+                        warn!("Stopping the setup");
+                    },
+                    _ => {
+                        assert!(false);
+                    }
+                }
+            },
+            ProcStack::default(),
+        );
+    }
+}
