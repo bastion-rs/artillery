@@ -83,7 +83,7 @@ fn main() {
         ..Default::default()
     };
 
-    let cluster = Cluster::new_cluster(host_key, config).unwrap();
+    let (cluster, _cluster_handle) = Cluster::new_cluster(host_key, config).unwrap();
 
     if let Some(seed_node) = seed_node {
         cluster.add_seed_node(FromStr::from_str(&seed_node).unwrap());

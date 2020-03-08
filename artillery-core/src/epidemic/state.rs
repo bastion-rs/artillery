@@ -16,9 +16,11 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use uuid::Uuid;
 
-use failure::_core::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
+
+use kaos::flunk;
 
 use crate::constants::*;
 
@@ -493,6 +495,7 @@ fn build_message(
     };
 
     for i in 0..=state_changes.len() {
+        flunk!("epidemic-state-change-tail-follow-fp");
         message = ArtilleryMessage {
             sender: *sender,
             cluster_key: cluster_key.into(),

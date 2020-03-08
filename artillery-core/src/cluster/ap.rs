@@ -4,9 +4,9 @@ use crate::service_discovery::mdns::prelude::*;
 
 use lightproc::prelude::*;
 
-use std::future::Future;
-
-use std::sync::Arc;
+use futures::{select, FutureExt};
+use pin_utils::pin_mut;
+use std::{cell::Cell, sync::Arc};
 use uuid::Uuid;
 
 #[derive(Default, Clone)]
@@ -21,6 +21,7 @@ pub struct ArtilleryAPCluster {
     config: ArtilleryAPClusterConfig,
     cluster: Arc<Cluster>,
     sd: Arc<MDNSServiceDiscovery>,
+    cluster_ev_loop_handle: Cell<RecoverableHandle<()>>,
 }
 
 unsafe impl Send for ArtilleryAPCluster {}
@@ -32,12 +33,14 @@ impl ArtilleryAPCluster {
     pub fn new(config: ArtilleryAPClusterConfig) -> Result<Self> {
         let sd = MDNSServiceDiscovery::new_service_discovery(config.sd_config.clone())?;
 
-        let cluster = Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
+        let (cluster, cluster_listener) =
+            Cluster::new_cluster(config.node_id, config.cluster_config.clone())?;
 
         Ok(Self {
             config,
             cluster: Arc::new(cluster),
             sd: Arc::new(sd),
+            cluster_ev_loop_handle: Cell::new(cluster_listener),
         })
     }
 
@@ -49,22 +52,34 @@ impl ArtilleryAPCluster {
         self.sd.clone()
     }
 
-    pub fn launch(&self) -> impl Future<Output = ()> + '_ {
-        let config = self.config.clone();
-        let events = self.service_discovery().events();
-        let cluster = self.cluster.clone();
+    pub fn shutdown(&self) {
+        self.cluster().leave_cluster();
+    }
 
-        async {
-            let config_inner = config;
-            let events_inner = events;
-            let cluster_inner = cluster;
+    pub async fn launch(&self) {
+        let (_, eh) = LightProc::recoverable(async {}, |_| (), ProcStack::default());
+        let ev_loop_handle = self.cluster_ev_loop_handle.replace(eh);
 
-            events_inner
-                .iter()
-                .filter(|discovery| {
-                    discovery.get().port() != config_inner.sd_config.local_service_addr.port()
-                })
-                .for_each(|discovery| cluster_inner.add_seed_node(discovery.get()))
-        }
+        // do fusing
+        let ev_loop_handle = ev_loop_handle.fuse();
+        let discover_nodes_handle = self.discover_nodes().fuse();
+
+        pin_mut!(ev_loop_handle);
+        pin_mut!(discover_nodes_handle);
+
+        select! {
+            ev_loop_res = ev_loop_handle => { dbg!(ev_loop_res); ev_loop_res.unwrap() },
+            _ = discover_nodes_handle => panic!("Node discovery unexpectedly shutdown.")
+        };
+    }
+
+    async fn discover_nodes(&self) {
+        self.service_discovery()
+            .events()
+            .iter()
+            .filter(|discovery| {
+                discovery.get().port() != self.config.sd_config.local_service_addr.port()
+            })
+            .for_each(|discovery| self.cluster.add_seed_node(discovery.get()))
     }
 }

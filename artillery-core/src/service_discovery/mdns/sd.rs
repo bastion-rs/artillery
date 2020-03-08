@@ -9,6 +9,7 @@ use libp2p::{identity, Multiaddr, PeerId};
 use lightproc::proc_stack::ProcStack;
 
 use crossbeam_channel::{unbounded, Receiver};
+use kaos::flunk;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -62,6 +63,7 @@ impl MDNSServiceDiscovery {
                                 for addr in peer.addresses() {
                                     debug!(" Address = {:?}", addr);
                                     let components = addr.iter().collect::<Vec<_>>();
+                                    flunk!("mdns-protocol-fp");
                                     if let Protocol::Ip4(discovered_ip) = components[0] {
                                         if let Protocol::Udp(discovered_port) = components[1] {
                                             let discovered =

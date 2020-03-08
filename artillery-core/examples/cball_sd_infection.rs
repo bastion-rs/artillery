@@ -177,6 +177,7 @@ fn get_cluster(listen_addr: &str, host_key: Uuid) -> &'static Cluster {
             ..Default::default()
         };
 
-        Cluster::new_cluster(host_key, config).unwrap()
+        let (cluster, _) = Cluster::new_cluster(host_key, config).unwrap();
+        cluster
     })
 }

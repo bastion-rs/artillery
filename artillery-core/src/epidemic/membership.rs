@@ -9,6 +9,8 @@ use super::member::{ArtilleryMember, ArtilleryMemberState, ArtilleryStateChange}
 use crate::epidemic::member;
 use bastion_utils::math;
 
+use kaos::flunk;
+
 pub struct ArtilleryMemberList {
     members: Vec<ArtilleryMember>,
     periodic_index: usize,
@@ -72,6 +74,7 @@ impl ArtilleryMemberList {
         if other_members.is_empty() {
             None
         } else {
+            flunk!("epidemic-periodic-index-fp");
             self.periodic_index = (self.periodic_index + 1) % other_members.len();
             Some(other_members[self.periodic_index].clone())
         }
