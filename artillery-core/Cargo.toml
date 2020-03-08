@@ -24,7 +24,7 @@ libp2p = "0.16.0"
 bastion-executor = "0.3.4"
 lightproc = "0.3.4"
 crossbeam-channel = "0.4.2"
-kaos = "0.1.1-alpha.1"
+kaos = "0.1.1-alpha.2"
 
 [dev-dependencies]
 bincode = "1.2.1"
