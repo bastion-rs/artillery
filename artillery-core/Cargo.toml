@@ -20,7 +20,7 @@ rand = "0.7.3"
 mio = { version = "0.7.0-alpha.1", features = ["os-poll", "udp"] }
 futures = "0.3"
 pin-utils = "0.1.0-alpha.4"
-libp2p = "0.16.0"
+libp2p = "0.17.0"
 bastion-executor = "0.3.4"
 lightproc = "0.3.4"
 crossbeam-channel = "0.4.2"
