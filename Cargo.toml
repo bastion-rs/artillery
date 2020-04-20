@@ -9,3 +9,7 @@ members = [
 [profile.release]
 lto = "fat"
 codegen-units = 1
+
+
+# [profile.bench]
+# debug = true
