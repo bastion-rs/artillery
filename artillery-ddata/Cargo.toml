@@ -4,6 +4,25 @@ version = "0.1.0"
 authors = ["Mahmut Bulut <vertexclique@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+log = "0.4"
+failure = "0.1.7"
+thrift = "0.13.0"
+t1ha = "0.1"
+crossbeam-channel = "0.4"
+
+
+[dev-dependencies]
+clap = "2.33.0"
+pretty_env_logger = "0.4.0"
+bastion = "0.3"
+bastion-executor = "0.3"
+lightproc = "0.3"
+rand = "0.7"
+criterion = "0.3"
+futures = "0.3"
+
+
+[[bench]]
+name = "craq_bencher"
+harness = false

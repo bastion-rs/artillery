@@ -1,0 +1,12 @@
+[config]
+default_to_workspace = false
+
+[env]
+CRAQ_DIR = "artillery-ddata/src/craq"
+
+[tasks.compile-craq]
+script = [
+    '''
+    thrift -out $CRAQ_DIR --gen rs $CRAQ_DIR/protocol/proto.thrift
+    '''
+]
