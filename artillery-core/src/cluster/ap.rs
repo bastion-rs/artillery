@@ -9,7 +9,7 @@ use pin_utils::pin_mut;
 use std::{cell::Cell, sync::Arc};
 use uuid::Uuid;
 
-#[derive(Default, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct ArtilleryAPClusterConfig {
     pub app_name: String,
     pub node_id: Uuid,
