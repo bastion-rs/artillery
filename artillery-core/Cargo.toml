@@ -3,9 +3,13 @@ name = "artillery-core"
 version = "0.1.0"
 authors = ["Mahmut Bulut <vertexclique@gmail.com>"]
 description = "Fire-forged cluster management & Distributed data protocol"
+keywords = ["cluster", "distributed", "data", "replication"]
+categories = ["network-programming", "database-implementations"]
+homepage = "https://artillery.bastion.rs/"
+repository = "https://github.com/bastion-rs/artillery"
+documentation = "https://docs.rs/artillery-core"
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "Apache-2.0/MIT"
 
 [dependencies]
 log = "0.4"
