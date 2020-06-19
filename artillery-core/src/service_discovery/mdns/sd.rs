@@ -70,6 +70,7 @@ impl MDNSServiceDiscovery {
                                                 format!("{}:{}", discovered_ip, discovered_port)
                                                     .parse()
                                                     .unwrap();
+
                                             event_tx
                                                 .send(MDNSServiceDiscoveryEvent(discovered))
                                                 .unwrap();

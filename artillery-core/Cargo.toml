@@ -1,11 +1,15 @@
 [package]
 name = "artillery-core"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 authors = ["Mahmut Bulut <vertexclique@gmail.com>"]
 description = "Fire-forged cluster management & Distributed data protocol"
+keywords = ["cluster", "distributed", "data", "replication"]
+categories = ["network-programming", "database-implementations"]
+homepage = "https://artillery.bastion.rs/"
+repository = "https://github.com/bastion-rs/artillery"
+documentation = "https://docs.rs/artillery-core"
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "Apache-2.0/MIT"
 
 [dependencies]
 log = "0.4"
@@ -19,7 +23,7 @@ uuid = { version = "0.8", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 rand = "0.7.3"
 mio = { version = "0.7.0-alpha.1", features = ["os-poll", "udp"] }
-futures = "0.3"
+futures = "0.3.5"
 pin-utils = "0.1.0-alpha.4"
 libp2p = { version = "0.19", features = ["mdns"] }
 bastion-executor = "0.3.4"
