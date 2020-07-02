@@ -8,8 +8,7 @@ use super::{
 use std::net::{SocketAddr, ToSocketAddrs};
 use thrift::protocol::{TBinaryInputProtocol, TBinaryOutputProtocol};
 use thrift::transport::{
-    TFramedReadTransport, TFramedReadTransportFactory, TFramedWriteTransport,
-    TFramedWriteTransportFactory, TIoChannel, TTcpChannel as BiTcp,
+    TFramedReadTransport, TFramedWriteTransport, TIoChannel, TTcpChannel as BiTcp,
 };
 
 pub struct ReadObject {
@@ -47,6 +46,8 @@ impl fmt::Display for ReadObject {
     }
 }
 
+// Will be fixed as we implement stuff
+#[allow(dead_code)]
 pub struct DDataCraqClient {
     host: SocketAddr,
     cc: CraqClient,
