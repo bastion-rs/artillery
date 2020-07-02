@@ -14,6 +14,7 @@ use std::{
 };
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct Cluster {
     pub events: Receiver<ArtilleryClusterEvent>,
     comm: Sender<ArtilleryClusterRequest>,
