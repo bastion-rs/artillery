@@ -1,6 +1,6 @@
 [package]
 name = "artillery-core"
-version = "0.1.1"
+version = "0.1.2-alpha.0"
 authors = ["Mahmut Bulut <vertexclique@gmail.com>"]
 description = "Fire-forged cluster management & Distributed data protocol"
 keywords = ["cluster", "distributed", "data", "replication"]
