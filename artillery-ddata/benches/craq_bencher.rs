@@ -2,7 +2,6 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use artillery_ddata::craq::prelude::*;
 
-use futures::stream::StreamExt;
 use rand::distributions::Alphanumeric;
 use rand::prelude::*;
 

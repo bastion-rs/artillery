@@ -77,7 +77,8 @@ fn main() {
                 assert_eq!(nodes.len(), varargs.len(), "Node address parsing failed");
 
                 let chain = CraqChain::new(&nodes, node_index).unwrap();
-                CraqNode::start(cr_mode, chain, CraqConfig::default());
+                CraqNode::start(cr_mode, chain, CraqConfig::default())
+                    .expect("couldn't start CRAQ node");
             }
         }
         ("client", Some(client_matches)) => {
