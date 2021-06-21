@@ -262,7 +262,7 @@ impl ArtilleryEpidemic {
     fn prune_timed_out_responses(&mut self) {
         let now = Utc::now();
 
-        let (remaining, expired): (Vec<_>, Vec<_>) = self
+        let (expired, remaining): (Vec<_>, Vec<_>) = self
             .pending_responses
             .iter()
             .cloned()
