@@ -48,7 +48,7 @@ let epidemic_sd_config = ExampleSDReply {
 };
 
 let reply = ServiceDiscoveryReply {
-    serialized_data: serde_json::to_string(&epidemic_sd_config).unwrap(),
+    serialized_data: bincode::serialize(&epidemic_sd_config).unwrap(),
 };
 
 // Initialize receiver channels
@@ -67,7 +67,7 @@ if let Some(_) = seeker {
 
 for discovery in discoveries.iter() {
     let discovery: ExampleSDReply =
-        serde_json::from_str(&discovery.serialized_data).unwrap();
+        bincode::deserialize(&discovery.serialized_data).unwrap();
     if discovery.port != epidemic_sd_config.port {
         debug!("Seed node address came");
         let seed_node = format!("{}:{}", discovery.ip, discovery.port);

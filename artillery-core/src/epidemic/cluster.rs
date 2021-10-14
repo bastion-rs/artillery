@@ -4,7 +4,7 @@ use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
 use bastion_executor::prelude::*;
 use lightproc::{proc_stack::ProcStack, recoverable_handle::RecoverableHandle};
-use std::convert::AsRef;
+use serde::Serialize;
 use std::net::SocketAddr;
 use std::{
     future::Future,
@@ -53,11 +53,11 @@ impl Cluster {
         let _ = self.comm.send(ArtilleryClusterRequest::AddSeed(addr));
     }
 
-    pub fn send_payload<T: AsRef<str>>(&self, id: Uuid, msg: T) {
+    pub fn send_payload<T: Serialize>(&self, id: Uuid, msg: &T) {
         self.comm
             .send(ArtilleryClusterRequest::Payload(
                 id,
-                msg.as_ref().to_string(),
+                bincode::serialize(msg).expect("Failed to serialize payload"),
             ))
             .unwrap();
     }

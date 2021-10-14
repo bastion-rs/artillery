@@ -34,7 +34,7 @@ pub enum ArtilleryMemberEvent {
     SuspectedDown(ArtilleryMember),
     WentDown(ArtilleryMember),
     Left(ArtilleryMember),
-    Payload(ArtilleryMember, String),
+    Payload(ArtilleryMember, Vec<u8>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,7 +54,7 @@ enum Request {
     Ack,
     Ping(EncSocketAddr),
     AckHost(ArtilleryMember),
-    Payload(Uuid, String),
+    Payload(Uuid, Vec<u8>),
 }
 
 #[derive(Debug, Clone)]
@@ -70,7 +70,7 @@ pub enum ArtilleryClusterRequest {
     React(TargetedRequest),
     LeaveCluster,
     Exit(Sender<()>),
-    Payload(Uuid, String),
+    Payload(Uuid, Vec<u8>),
 }
 
 const UDP_SERVER: Token = Token(0);
@@ -175,7 +175,7 @@ impl ArtilleryEpidemic {
                     loop {
                         match state.server_socket.recv_from(&mut buf) {
                             Ok((packet_size, source_address)) => {
-                                let message = serde_json::from_slice(&buf[..packet_size])?;
+                                let message = bincode::deserialize(&buf[..packet_size])?;
                                 state.request_tx.send(ArtilleryClusterRequest::Respond(
                                     source_address,
                                     message,
@@ -229,12 +229,13 @@ impl ArtilleryEpidemic {
                 .push((timeout, request.target, message.state_changes.clone()));
         }
 
-        let encoded = serde_json::to_string(&message).unwrap();
+        let encoded = bincode::serialize(&message).unwrap();
 
         assert!(encoded.len() < self.config.network_mtu);
 
-        let buf = encoded.as_bytes();
-        self.server_socket.send_to(buf, request.target).unwrap();
+        self.server_socket
+            .send_to(&encoded, request.target)
+            .unwrap();
     }
 
     fn enqueue_seed_nodes(&self) {
@@ -503,7 +504,7 @@ fn build_message(
             state_changes: (&state_changes[..i]).to_vec(),
         };
 
-        let encoded = serde_json::to_string(&message).unwrap();
+        let encoded = bincode::serialize(&message).unwrap();
         if encoded.len() >= network_mtu {
             return message;
         }
@@ -515,7 +516,7 @@ fn build_message(
 fn add_to_wait_list(wait_list: &mut WaitList, wait_addr: &SocketAddr, notify_addr: &SocketAddr) {
     match wait_list.entry(*wait_addr) {
         Entry::Occupied(mut entry) => {
-            entry.get_mut().push(notify_addr.clone());
+            entry.get_mut().push(*notify_addr);
         }
         Entry::Vacant(entry) => {
             entry.insert(vec![*notify_addr]);

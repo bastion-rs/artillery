@@ -34,8 +34,8 @@ impl From<io::Error> for ArtilleryError {
     }
 }
 
-impl From<serde_json::error::Error> for ArtilleryError {
-    fn from(e: serde_json::error::Error) -> Self {
+impl From<bincode::Error> for ArtilleryError {
+    fn from(e: bincode::Error) -> Self {
         ArtilleryError::ClusterMessageDecode(e.to_string())
     }
 }

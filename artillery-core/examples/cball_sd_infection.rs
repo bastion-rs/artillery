@@ -86,7 +86,7 @@ fn main() {
     };
 
     let reply = ServiceDiscoveryReply {
-        serialized_data: serde_json::to_string(&epidemic_sd_config).unwrap(),
+        serialized_data: bincode::serialize(&epidemic_sd_config).unwrap(),
     };
 
     let sd = MulticastServiceDiscovery::new_service_discovery(service_discovery, reply).unwrap();
@@ -109,7 +109,7 @@ fn main() {
         .expect("cannot start cluster-event-poller");
 
     for discovery in discoveries.iter() {
-        let discovery: ExampleSDReply = serde_json::from_str(&discovery.serialized_data).unwrap();
+        let discovery: ExampleSDReply = bincode::deserialize(&discovery.serialized_data).unwrap();
         if discovery.port != epidemic_sd_config.port {
             debug!("Seed node address came");
             let seed_node = format!("{}:{}", epidemic_sd_config.ip, discovery.port);

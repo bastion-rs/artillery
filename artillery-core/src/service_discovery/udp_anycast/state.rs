@@ -21,7 +21,7 @@ use kaos::flunk;
 /// Default acknowledgement reply for the Discovery.
 pub struct ServiceDiscoveryReply {
     /// Serialized data which can be contained in replies.
-    pub serialized_data: String,
+    pub serialized_data: Vec<u8>,
 }
 
 impl Default for ServiceDiscoveryReply {
@@ -80,12 +80,12 @@ impl MulticastServiceDiscoveryState {
             .register(&mut server_socket, ON_DISCOVERY, get_interests())?;
 
         let uid = rand::random();
-        let seek_request = serde_json::to_string(&ServiceDiscoveryMessage::Request)?;
+        let seek_request = bincode::serialize(&ServiceDiscoveryMessage::Request)?;
 
         let state = MulticastServiceDiscoveryState {
             config,
             server_socket,
-            seek_request: seek_request.as_bytes().into(),
+            seek_request,
             observers: Vec::new(),
             seeker_replies: VecDeque::new(),
             default_reply: discovery_reply,
@@ -99,9 +99,7 @@ impl MulticastServiceDiscoveryState {
 
     fn readable(&mut self, buf: &mut [u8], poll: &mut Poll) -> Result<()> {
         if let Ok((_bytes_read, peer_addr)) = self.server_socket.recv_from(buf) {
-            let serialized = std::str::from_utf8(buf)?.to_string().trim().to_string();
-            let serialized = serialized.trim_matches(char::from(0x00));
-            let msg: ServiceDiscoveryMessage = if let Ok(msg) = serde_json::from_str(serialized) {
+            let msg: ServiceDiscoveryMessage = if let Ok(msg) = bincode::deserialize(buf) {
                 msg
             } else {
                 return Ok(());
@@ -148,7 +146,7 @@ impl MulticastServiceDiscoveryState {
                     uid: self.uid,
                     content: self.default_reply.clone(),
                 };
-                let discovery_reply = serde_json::to_vec(&reply)?;
+                let discovery_reply = bincode::serialize(&reply)?;
 
                 while let Some(peer_addr) = self.seeker_replies.pop_front() {
                     let mut sent_bytes = 0;

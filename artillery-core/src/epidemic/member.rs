@@ -227,7 +227,7 @@ mod test {
 
         let decoded: ArtilleryMember = bincode::deserialize(&encoded).unwrap();
 
-        let json_encoded = serde_json::to_string(&member).unwrap();
+        let json_encoded = bincode::serialize(&member).unwrap();
         dbg!(json_encoded);
 
         assert_eq!(decoded, member);
