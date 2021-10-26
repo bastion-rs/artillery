@@ -2,6 +2,7 @@ use super::cluster_config::ClusterConfig;
 use super::membership::ArtilleryMemberList;
 use crate::epidemic::member::{ArtilleryMember, ArtilleryMemberState, ArtilleryStateChange};
 use crate::errors::*;
+use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use cuneiform_fields::prelude::*;
 use mio::net::UdpSocket;
@@ -34,7 +35,7 @@ pub enum ArtilleryMemberEvent {
     SuspectedDown(ArtilleryMember),
     WentDown(ArtilleryMember),
     Left(ArtilleryMember),
-    Payload(ArtilleryMember, Vec<u8>),
+    Payload(ArtilleryMember, Bytes),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,7 +55,7 @@ enum Request {
     Ack,
     Ping(EncSocketAddr),
     AckHost(ArtilleryMember),
-    Payload(Uuid, Vec<u8>),
+    Payload(Uuid, Bytes),
 }
 
 #[derive(Debug, Clone)]
@@ -70,7 +71,7 @@ pub enum ArtilleryClusterRequest {
     React(TargetedRequest),
     LeaveCluster,
     Exit(Sender<()>),
-    Payload(Uuid, Vec<u8>),
+    Payload(Uuid, Bytes),
 }
 
 const UDP_SERVER: Token = Token(0);

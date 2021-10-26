@@ -3,6 +3,7 @@ use crate::epidemic::cluster_config::ClusterConfig;
 use crate::epidemic::state::{ArtilleryClusterEvent, ArtilleryClusterRequest};
 use crate::errors::*;
 use bastion_executor::prelude::*;
+use bytes::Bytes;
 use lightproc::{proc_stack::ProcStack, recoverable_handle::RecoverableHandle};
 use serde::Serialize;
 use std::net::SocketAddr;
@@ -57,7 +58,7 @@ impl Cluster {
         self.comm
             .send(ArtilleryClusterRequest::Payload(
                 id,
-                bincode::serialize(msg).expect("Failed to serialize payload"),
+                Bytes::from(bincode::serialize(msg).expect("Failed to serialize payload")),
             ))
             .unwrap();
     }
