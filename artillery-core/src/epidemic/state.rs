@@ -230,7 +230,7 @@ impl ArtilleryEpidemic {
                 .push((timeout, request.target, message.state_changes.clone()));
         }
 
-        let encoded = bincode::serialize(&message).unwrap();
+        let encoded = Bytes::from(bincode::serialize(&message).unwrap());
 
         assert!(encoded.len() < self.config.network_mtu);
 
@@ -505,7 +505,7 @@ fn build_message(
             state_changes: (&state_changes[..i]).to_vec(),
         };
 
-        let encoded = bincode::serialize(&message).unwrap();
+        let encoded = Bytes::from(bincode::serialize(&message).unwrap());
         if encoded.len() >= network_mtu {
             return message;
         }

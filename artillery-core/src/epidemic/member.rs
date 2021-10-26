@@ -208,6 +208,7 @@ mod test {
     use std::str::FromStr;
 
     use super::{ArtilleryMember, ArtilleryMemberState};
+    use bytes::Bytes;
     use chrono::{Duration, Utc};
 
     use uuid;
@@ -222,12 +223,12 @@ mod test {
             last_state_change: Utc::now() - Duration::days(1),
         };
 
-        let encoded = bincode::serialize(&member).unwrap();
+        let encoded = Bytes::from(bincode::serialize(&member).unwrap());
         dbg!(encoded.len());
 
         let decoded: ArtilleryMember = bincode::deserialize(&encoded).unwrap();
 
-        let json_encoded = bincode::serialize(&member).unwrap();
+        let json_encoded = Bytes::from(bincode::serialize(&member).unwrap());
         dbg!(json_encoded);
 
         assert_eq!(decoded, member);

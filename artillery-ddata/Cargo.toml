@@ -10,7 +10,7 @@ failure = "0.1.7"
 thrift = "0.13.0"
 t1ha = "0.1"
 crossbeam-channel = "0.4"
-
+bytes = { version = "1", features = [ "serde" ] }
 
 [dev-dependencies]
 clap = "2.33.0"

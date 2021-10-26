@@ -6,6 +6,7 @@ use super::{
     proto::{CraqConsistencyModel, CraqObject, TCraqServiceSyncClient},
 };
 use std::net::{SocketAddr, ToSocketAddrs};
+use bytes::Bytes;
 use thrift::protocol::{TBinaryInputProtocol, TBinaryOutputProtocol};
 use thrift::transport::{
     TFramedReadTransport, TFramedWriteTransport, TIoChannel, TTcpChannel as BiTcp,
@@ -14,7 +15,7 @@ use thrift::transport::{
 pub struct ReadObject {
     ///
     /// Object's value.
-    value: Vec<u8>,
+    value: Bytes,
     ///
     /// Whether the read was dirty (true) or clean (false).
     dirty: bool,
@@ -23,7 +24,7 @@ pub struct ReadObject {
 impl ReadObject {
     ///
     /// Creates a new wrapper Read Object
-    pub fn new(value: Vec<u8>, dirty: bool) -> Self {
+    pub fn new(value: Bytes, dirty: bool) -> Self {
         Self { value, dirty }
     }
 }
@@ -93,7 +94,7 @@ impl DDataCraqClient {
     /// Writes an object to the cluster, returning the new object version or -1 upon failure.
     pub fn write(&mut self, value: String) -> Result<i64> {
         let mut obj = CraqObject::default();
-        obj.value = Some(value.into_bytes());
+        obj.value = Some(value.into());
         Ok(self.cc.write(obj)?)
     }
 
@@ -112,7 +113,7 @@ impl DDataCraqClient {
     /// Performs a test-and-set operation, returning the new object version or -1 upon failure.
     pub fn test_and_set(&mut self, value: String, expected_version: i64) -> Result<i64> {
         let mut obj = CraqObject::default();
-        obj.value = Some(value.into_bytes());
+        obj.value = Some(value.into());
         Ok(self.cc.test_and_set(obj, expected_version)?)
     }
 }

@@ -3,6 +3,7 @@ use crate::errors::*;
 use crate::service_discovery::udp_anycast::discovery_config::MulticastServiceDiscoveryConfig;
 use std::convert::TryFrom;
 
+use bytes::Bytes;
 use cuneiform_fields::arch::ArchPadding;
 use mio::net::UdpSocket;
 use mio::{Events, Interest, Poll, Token};
@@ -21,7 +22,7 @@ use kaos::flunk;
 /// Default acknowledgement reply for the Discovery.
 pub struct ServiceDiscoveryReply {
     /// Serialized data which can be contained in replies.
-    pub serialized_data: Vec<u8>,
+    pub serialized_data: Bytes,
 }
 
 impl Default for ServiceDiscoveryReply {
@@ -55,7 +56,7 @@ const SEEK_NODES: Token = Token(1);
 pub struct MulticastServiceDiscoveryState {
     config: MulticastServiceDiscoveryConfig,
     server_socket: UdpSocket,
-    seek_request: Vec<u8>,
+    seek_request: Bytes,
     observers: Vec<ArchPadding<Sender<ServiceDiscoveryReply>>>,
     seeker_replies: VecDeque<SocketAddr>,
     default_reply: ServiceDiscoveryReply,
@@ -80,7 +81,7 @@ impl MulticastServiceDiscoveryState {
             .register(&mut server_socket, ON_DISCOVERY, get_interests())?;
 
         let uid = rand::random();
-        let seek_request = bincode::serialize(&ServiceDiscoveryMessage::Request)?;
+        let seek_request = Bytes::from(bincode::serialize(&ServiceDiscoveryMessage::Request)?);
 
         let state = MulticastServiceDiscoveryState {
             config,
@@ -146,7 +147,7 @@ impl MulticastServiceDiscoveryState {
                     uid: self.uid,
                     content: self.default_reply.clone(),
                 };
-                let discovery_reply = bincode::serialize(&reply)?;
+                let discovery_reply = Bytes::from(bincode::serialize(&reply)?);
 
                 while let Some(peer_addr) = self.seeker_replies.pop_front() {
                     let mut sent_bytes = 0;

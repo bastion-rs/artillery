@@ -3,6 +3,7 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 
+use bytes::Bytes;
 use clap::*;
 use std::convert::TryInto;
 use std::fs::File;
@@ -86,7 +87,7 @@ fn main() {
     };
 
     let reply = ServiceDiscoveryReply {
-        serialized_data: bincode::serialize(&epidemic_sd_config).unwrap(),
+        serialized_data: Bytes::from(bincode::serialize(&epidemic_sd_config).unwrap()),
     };
 
     let sd = MulticastServiceDiscovery::new_service_discovery(service_discovery, reply).unwrap();

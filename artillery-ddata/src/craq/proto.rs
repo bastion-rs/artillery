@@ -16,6 +16,7 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
+use bytes::Bytes;
 use thrift::OrderedFloat;
 
 use thrift::protocol::field_id;
@@ -78,14 +79,14 @@ pub type Version = i64;
 /// Object envelope.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CraqObject {
-    pub value: Option<Vec<u8>>,
+    pub value: Option<Bytes>,
     pub dirty: Option<bool>,
 }
 
 impl CraqObject {
     pub fn new<F1, F2>(value: F1, dirty: F2) -> CraqObject
     where
-        F1: Into<Option<Vec<u8>>>,
+        F1: Into<Option<Bytes>>,
         F2: Into<Option<bool>>,
     {
         CraqObject {
@@ -95,7 +96,7 @@ impl CraqObject {
     }
     pub fn read_from_in_protocol(i_prot: &mut dyn TInputProtocol) -> thrift::Result<CraqObject> {
         i_prot.read_struct_begin()?;
-        let mut f_1: Option<Vec<u8>> = None;
+        let mut f_1: Option<Bytes> = None;
         let mut f_2: Option<bool> = None;
         loop {
             let field_ident = i_prot.read_field_begin()?;
@@ -106,7 +107,7 @@ impl CraqObject {
             match field_id {
                 1 => {
                     let val = i_prot.read_bytes()?;
-                    f_1 = Some(val);
+                    f_1 = Some(val.into());
                 }
                 2 => {
                     let val = i_prot.read_bool()?;
@@ -152,7 +153,7 @@ impl CraqObject {
 impl Default for CraqObject {
     fn default() -> Self {
         CraqObject {
-            value: Some(Vec::new()),
+            value: Some(Bytes::new()),
             dirty: Some(false),
         }
     }
