@@ -9,7 +9,7 @@ log = "0.4"
 failure = "0.1.7"
 thrift = "0.13.0"
 t1ha = "0.1"
-crossbeam-channel = "0.4"
+crossbeam-channel = "0.5"
 
 
 [dev-dependencies]
